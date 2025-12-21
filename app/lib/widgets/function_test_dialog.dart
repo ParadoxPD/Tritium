@@ -4,9 +4,12 @@ import '../utils/expression_evaluator.dart';
 
 class FunctionTestDialog extends StatefulWidget {
   final CustomFunction function;
-
-  const FunctionTestDialog({Key? key, required this.function})
-    : super(key: key);
+  final Map<String, FunctionDef> functions;
+  const FunctionTestDialog({
+    Key? key,
+    required this.function,
+    required this.functions,
+  }) : super(key: key);
 
   @override
   State<FunctionTestDialog> createState() => _FunctionTestDialogState();
@@ -45,7 +48,11 @@ class _FunctionTestDialogState extends State<FunctionTestDialog> {
         );
       }
 
-      final result = _evaluator.evaluate(expr, AngleMode.rad);
+      final result = _evaluator.evaluate(
+        expr,
+        AngleMode.rad,
+        context: EvalContext(functions: widget.functions),
+      );
 
       setState(() {
         if (result is EvalSuccess) {

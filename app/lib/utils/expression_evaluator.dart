@@ -19,12 +19,48 @@ class EvalError extends EvaluationResult {
 
 enum EvalErrorType { syntax, divisionByZero, domain, unknown }
 
+class RecursionGuard {
+  final int depth;
+  final int maxDepth;
+
+  const RecursionGuard(this.depth, this.maxDepth);
+
+  RecursionGuard next() {
+    if (depth >= maxDepth) {
+      throw const EvalError(
+        EvalErrorType.domain,
+        'Maximum recursion depth exceeded',
+      );
+    }
+    return RecursionGuard(depth + 1, maxDepth);
+  }
+}
+
+class FunctionDef {
+  final List<String> params;
+  final String body;
+
+  const FunctionDef(this.params, this.body);
+}
+
+class EvalContext {
+  final Map<String, double> variables;
+  final Map<String, FunctionDef> functions;
+
+  const EvalContext({this.variables = const {}, this.functions = const {}});
+}
+
 class ExpressionEvaluator {
-  EvaluationResult evaluate(String expr, AngleMode mode) {
+  EvaluationResult evaluate(
+    String expr,
+    AngleMode mode, {
+    EvalContext context = const EvalContext(),
+    RecursionGuard guard = const RecursionGuard(0, 32),
+  }) {
     try {
       final tokens = _insertImplicitMultiplication(_tokenize(expr));
       final postfix = _toPostfix(tokens);
-      final result = _evalPostfix(postfix, mode);
+      final result = _evalPostfix(postfix, mode, context, guard);
       return EvalSuccess(result);
     } on EvalError catch (e) {
       return e;
@@ -62,6 +98,10 @@ class ExpressionEvaluator {
         flush();
         if (c.trim().isEmpty) continue;
 
+        if (c == ',') {
+          tokens.add(',');
+        }
+
         if ('+-*/^()'.contains(c)) {
           if ((c == '-' || c == '+') &&
               (tokens.isEmpty || '()+-*/^'.contains(tokens.last))) {
@@ -85,9 +125,13 @@ class ExpressionEvaluator {
   }
 
   /* ===================== IMPLICIT MULTIPLICATION ===================== */
-
   List<String> _insertImplicitMultiplication(List<String> t) {
     final out = <String>[];
+
+    bool isValue(String x) => _isNumber(x) || x == ')' || _isFunction(x);
+
+    bool isStart(String x) => _isNumber(x) || x == '(' || _isFunction(x);
+
     for (int i = 0; i < t.length; i++) {
       out.add(t[i]);
       if (i == t.length - 1) break;
@@ -95,10 +139,7 @@ class ExpressionEvaluator {
       final a = t[i];
       final b = t[i + 1];
 
-      final left = _isNumber(a) || a == ')' || _isFunction(a);
-      final right = _isNumber(b) || b == '(' || _isFunction(b);
-
-      if (left && right) {
+      if (isValue(a) && isStart(b)) {
         out.add('*');
       }
     }
@@ -133,6 +174,10 @@ class ExpressionEvaluator {
         if (stack.isNotEmpty && _isFunction(stack.last)) {
           out.add(stack.removeLast());
         }
+      } else if (tok == ',') {
+        while (stack.isNotEmpty && stack.last != '(') {
+          out.add(stack.removeLast());
+        }
       } else {
         while (stack.isNotEmpty &&
             prec.containsKey(stack.last) &&
@@ -156,7 +201,12 @@ class ExpressionEvaluator {
 
   /* ===================== POSTFIX ===================== */
 
-  double _evalPostfix(List<String> t, AngleMode mode) {
+  double _evalPostfix(
+    List<String> t,
+    AngleMode mode,
+    EvalContext context,
+    RecursionGuard guard,
+  ) {
     final stack = <double>[];
     final angle = mode == AngleMode.rad ? 1.0 : math.pi / 180;
 
@@ -171,6 +221,43 @@ class ExpressionEvaluator {
       } else if (tok == 'u+') {
         if (stack.isEmpty) {
           throw const EvalError(EvalErrorType.syntax, 'Unary plus error');
+        }
+      } else if (context.functions.containsKey(tok)) {
+        final def = context.functions[tok]!;
+
+        if (stack.length < def.params.length) {
+          throw EvalError(
+            EvalErrorType.syntax,
+            'Function $tok expects ${def.params.length} arguments',
+          );
+        }
+
+        // Pop arguments (reverse order)
+        final args = <double>[];
+        for (int i = 0; i < def.params.length; i++) {
+          args.insert(0, stack.removeLast());
+        }
+
+        // New variable scope
+        final newVars = Map<String, double>.from(context.variables);
+        for (int i = 0; i < def.params.length; i++) {
+          newVars[def.params[i]] = args[i];
+        }
+
+        final result = evaluate(
+          def.body,
+          mode,
+          context: EvalContext(
+            variables: newVars,
+            functions: context.functions,
+          ),
+          guard: guard.next(),
+        );
+
+        if (result is EvalSuccess) {
+          stack.add(result.value);
+        } else {
+          throw result as EvalError;
         }
       } else if (_isFunction(tok)) {
         if (stack.isEmpty) {
@@ -208,7 +295,52 @@ class ExpressionEvaluator {
             }
             stack.add(math.sqrt(v));
             break;
+          case 'abs':
+            stack.add(v.abs());
+            break;
+
+          case 'mod':
+            if (stack.length < 2) {
+              throw const EvalError(
+                EvalErrorType.syntax,
+                'mod(a,b) needs 2 args',
+              );
+            }
+            final b = stack.removeLast();
+            final a = stack.removeLast();
+            if (b == 0) {
+              throw const EvalError(
+                EvalErrorType.divisionByZero,
+                'mod by zero',
+              );
+            }
+            stack.add(a - b * (a / b).floor());
+            break;
+          case 'fact':
+            if (v < 0 || v != v.floor()) {
+              throw const EvalError(
+                EvalErrorType.domain,
+                'factorial domain error',
+              );
+            }
+            if (v > 20) {
+              throw const EvalError(
+                EvalErrorType.domain,
+                'factorial too large',
+              );
+            }
+            int res = 1;
+            for (int i = 1; i <= v; i++) {
+              res *= i;
+            }
+            stack.add(res.toDouble());
+            break;
         }
+      } else if (_isIdentifier(tok)) {
+        if (!context.variables.containsKey(tok)) {
+          throw EvalError(EvalErrorType.syntax, 'Unknown variable: $tok');
+        }
+        stack.add(context.variables[tok]!);
       } else {
         if (stack.length < 2) {
           throw const EvalError(EvalErrorType.syntax, 'Binary operator error');
@@ -248,6 +380,17 @@ class ExpressionEvaluator {
   }
 
   bool _isNumber(String s) => double.tryParse(s) != null;
-  bool _isFunction(String s) =>
-      const {'sin', 'cos', 'tan', 'ln', 'log', 'sqrt'}.contains(s);
+  bool _isFunction(String s) => const {
+    'sin',
+    'cos',
+    'tan',
+    'ln',
+    'log',
+    'sqrt',
+    'abs',
+    'mod',
+    'fact',
+  }.contains(s);
+  bool _isIdentifier(String s) =>
+      RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(s);
 }

@@ -1,3 +1,5 @@
+import 'package:app/models/custom_function.dart';
+import 'package:app/utils/expression_evaluator.dart';
 import 'package:flutter/material.dart';
 import 'scientific_calculator_page.dart';
 import 'modulo_calculator_page.dart';
@@ -15,14 +17,18 @@ class CalculatorHome extends StatefulWidget {
 
 class _CalculatorHomeState extends State<CalculatorHome> {
   int _selectedIndex = 0;
+  final Map<String, FunctionDef> _functions = {};
 
-  final List<Widget> _pages = [
-    const ScientificCalculatorPage(),
-    const ModuloCalculatorPage(),
-    const MatrixCalculatorPage(),
-    const BaseNCalculatorPage(),
-    const ConversionPage(),
-    const CustomFunctionsPage(),
+  List<Widget> get _pages => [
+    ScientificCalculatorPage(functions: _functions),
+    ModuloCalculatorPage(),
+    MatrixCalculatorPage(),
+    BaseNCalculatorPage(),
+    ConversionPage(),
+    CustomFunctionsPage(
+      functions: _functions,
+      onFunctionsUpdated: _updateFunctions,
+    ),
   ];
 
   @override
@@ -53,5 +59,12 @@ class _CalculatorHomeState extends State<CalculatorHome> {
         ],
       ),
     );
+  }
+
+  void _updateFunctions(List<CustomFunction> list) {
+    _functions.clear();
+    for (final f in list) {
+      _functions[f.name] = FunctionDef(f.parameters, f.formula);
+    }
   }
 }

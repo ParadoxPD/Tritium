@@ -1,9 +1,17 @@
+import 'package:app/utils/expression_evaluator.dart';
 import 'package:flutter/material.dart';
 import '../models/custom_function.dart';
 import '../widgets/function_test_dialog.dart';
 
 class CustomFunctionsPage extends StatefulWidget {
-  const CustomFunctionsPage({Key? key}) : super(key: key);
+  final Map<String, FunctionDef> functions;
+  final void Function(List<CustomFunction>) onFunctionsUpdated;
+
+  const CustomFunctionsPage({
+    Key? key,
+    required this.functions,
+    required this.onFunctionsUpdated,
+  }) : super(key: key);
 
   @override
   State<CustomFunctionsPage> createState() => _CustomFunctionsPageState();
@@ -41,6 +49,8 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
         _formulaController.clear();
         _parameters.clear();
       });
+      widget.onFunctionsUpdated(_functions);
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Function saved!')));
@@ -51,12 +61,15 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
     setState(() {
       _functions.removeAt(index);
     });
+
+    widget.onFunctionsUpdated(_functions);
   }
 
   void _testFunction(CustomFunction func) {
     showDialog(
       context: context,
-      builder: (context) => FunctionTestDialog(function: func),
+      builder: (context) =>
+          FunctionTestDialog(function: func, functions: widget.functions),
     );
   }
 

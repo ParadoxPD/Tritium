@@ -2,8 +2,21 @@ import 'package:flutter/material.dart';
 import '../widgets/calculator_button.dart';
 import '../utils/expression_evaluator.dart';
 
+enum TokenType {
+  number,
+  decimal,
+  operator,
+  function,
+  leftParen,
+  rightParen,
+  constant,
+}
+
 class ScientificCalculatorPage extends StatefulWidget {
-  const ScientificCalculatorPage({Key? key}) : super(key: key);
+  final Map<String, FunctionDef> functions;
+
+  const ScientificCalculatorPage({Key? key, required this.functions})
+    : super(key: key);
 
   @override
   State<ScientificCalculatorPage> createState() =>
@@ -13,17 +26,34 @@ class ScientificCalculatorPage extends StatefulWidget {
 class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
   String display = '0';
   String expression = '';
+  int _parenBalance = 0;
 
   AngleMode angleMode = AngleMode.rad;
   final ExpressionEvaluator _evaluator = ExpressionEvaluator();
-
   void onButtonPressed(String value) {
     setState(() {
+      // CLEAR
       if (value == 'C') {
         display = '0';
         expression = '';
-      } else if (value == '=') {
-        final result = _evaluator.evaluate(expression, angleMode);
+        _parenBalance = 0;
+        return;
+      }
+
+      // EVALUATE
+      if (value == '=') {
+        if (_parenBalance != 0) {
+          display = 'Error';
+          expression = '';
+          _parenBalance = 0;
+          return;
+        }
+
+        final result = _evaluator.evaluate(
+          expression,
+          angleMode,
+          context: EvalContext(functions: widget.functions),
+        );
 
         if (result is EvalSuccess) {
           final formatted = result.value
@@ -33,25 +63,48 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
 
           display = formatted;
           expression = formatted;
-        } else if (result is EvalError) {
+        } else {
           display = 'Error';
           expression = '';
+          _parenBalance = 0;
         }
-      } else if (value == 'DEL') {
+        return;
+      }
+
+      // DELETE
+      if (value == 'DEL') {
         if (expression.isNotEmpty) {
+          final removed = expression.characters.last;
           expression = expression.substring(0, expression.length - 1);
+
+          if (removed == '(') _parenBalance--;
+          if (removed == ')') _parenBalance++;
+
           display = expression.isEmpty ? '0' : expression;
         }
-      } else if (value == 'RAD/DEG') {
-        angleMode = angleMode == AngleMode.rad ? AngleMode.deg : AngleMode.rad;
-      } else {
-        if (display == '0' || display == 'Error') {
-          expression = value;
-        } else {
-          expression += value;
-        }
-        display = expression;
+        return;
       }
+
+      // RAD / DEG
+      if (value == 'RAD/DEG') {
+        angleMode = angleMode == AngleMode.rad ? AngleMode.deg : AngleMode.rad;
+        return;
+      }
+
+      // GRAMMAR CHECK
+      if (!_canAppend(value)) return;
+
+      // APPEND
+      if (display == '0' || display == 'Error') {
+        expression = value;
+      } else {
+        expression += value;
+      }
+
+      if (value == '(') _parenBalance++;
+      if (value == ')') _parenBalance--;
+
+      display = expression;
     });
   }
 
@@ -253,5 +306,62 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
         ),
       ],
     );
+  }
+
+  TokenType _tokenType(String v) {
+    if ('0123456789'.contains(v)) return TokenType.number;
+    if (v == '.') return TokenType.decimal;
+    if ('+-*/^'.contains(v)) return TokenType.operator;
+    if (v == '(') return TokenType.leftParen;
+    if (v == ')') return TokenType.rightParen;
+    if (v == 'π' || v == 'e') return TokenType.constant;
+    return TokenType.function; // sin, cos, log, etc.
+  }
+
+  bool _canAppend(String value) {
+    if (expression.isEmpty) {
+      // Expression start rules
+      return !'*/^)'.contains(value);
+    }
+
+    final last = expression.characters.last;
+    final lastType = _tokenType(last);
+    final currType = _tokenType(value);
+
+    // Operator rules
+    if (currType == TokenType.operator) {
+      if (lastType == TokenType.operator || lastType == TokenType.leftParen) {
+        // Allow unary minus
+        return value == '-';
+      }
+    }
+
+    // Decimal rules
+    if (currType == TokenType.decimal) {
+      // Prevent multiple decimals in same number
+      final parts = expression.split(RegExp(r'[+\-*/^()]'));
+
+      return !parts.last.contains('.');
+    }
+
+    // Right parenthesis rules
+    if (currType == TokenType.rightParen) {
+      if (_parenBalance == 0) return false;
+      if (lastType == TokenType.operator || lastType == TokenType.leftParen) {
+        return false;
+      }
+    }
+
+    // Left parenthesis rules
+    if (currType == TokenType.leftParen) {
+      if (lastType == TokenType.number ||
+          lastType == TokenType.constant ||
+          lastType == TokenType.rightParen) {
+        // implicit multiplication allowed
+        return true;
+      }
+    }
+
+    return true;
   }
 }

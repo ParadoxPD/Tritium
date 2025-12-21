@@ -1,118 +1,20 @@
+import 'package:app/core/evaluator/eval_types.dart';
+import 'package:app/core/evaluator/expression_evaluator.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../state/calculator_state.dart';
 import '../widgets/calculator_button.dart';
-import '../utils/expression_evaluator.dart';
 
-enum TokenType {
-  number,
-  decimal,
-  operator,
-  function,
-  leftParen,
-  rightParen,
-  constant,
-}
-
-class ScientificCalculatorPage extends StatefulWidget {
-  final Map<String, FunctionDef> functions;
-
-  const ScientificCalculatorPage({Key? key, required this.functions})
-    : super(key: key);
-
-  @override
-  State<ScientificCalculatorPage> createState() =>
-      _ScientificCalculatorPageState();
-}
-
-class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
-  String display = '0';
-  String expression = '';
-  int _parenBalance = 0;
-
-  AngleMode angleMode = AngleMode.rad;
-  final ExpressionEvaluator _evaluator = ExpressionEvaluator();
-  void onButtonPressed(String value) {
-    setState(() {
-      // CLEAR
-      if (value == 'C') {
-        display = '0';
-        expression = '';
-        _parenBalance = 0;
-        return;
-      }
-
-      // EVALUATE
-      if (value == '=') {
-        if (_parenBalance != 0) {
-          display = 'Error';
-          expression = '';
-          _parenBalance = 0;
-          return;
-        }
-
-        final result = _evaluator.evaluate(
-          expression,
-          angleMode,
-          context: EvalContext(functions: widget.functions),
-        );
-
-        if (result is EvalSuccess) {
-          final formatted = result.value
-              .toStringAsFixed(10)
-              .replaceFirst(RegExp(r'\.0+$'), '')
-              .replaceFirst(RegExp(r'(\.\d*?)0+$'), r'\1');
-
-          display = formatted;
-          expression = formatted;
-        } else {
-          display = 'Error';
-          expression = '';
-          _parenBalance = 0;
-        }
-        return;
-      }
-
-      // DELETE
-      if (value == 'DEL') {
-        if (expression.isNotEmpty) {
-          final removed = expression.characters.last;
-          expression = expression.substring(0, expression.length - 1);
-
-          if (removed == '(') _parenBalance--;
-          if (removed == ')') _parenBalance++;
-
-          display = expression.isEmpty ? '0' : expression;
-        }
-        return;
-      }
-
-      // RAD / DEG
-      if (value == 'RAD/DEG') {
-        angleMode = angleMode == AngleMode.rad ? AngleMode.deg : AngleMode.rad;
-        return;
-      }
-
-      // GRAMMAR CHECK
-      if (!_canAppend(value)) return;
-
-      // APPEND
-      if (display == '0' || display == 'Error') {
-        expression = value;
-      } else {
-        expression += value;
-      }
-
-      if (value == '(') _parenBalance++;
-      if (value == ')') _parenBalance--;
-
-      display = expression;
-    });
-  }
+class ScientificCalculatorPage extends StatelessWidget {
+  const ScientificCalculatorPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final state = context.watch<CalculatorState>();
+
     return Column(
       children: [
-        // Display
+        // DISPLAY
         Container(
           padding: const EdgeInsets.all(20),
           alignment: Alignment.centerRight,
@@ -121,247 +23,87 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                expression,
+                state.expression,
                 style: const TextStyle(fontSize: 20, color: Colors.grey),
               ),
               const SizedBox(height: 10),
               Text(
-                display,
+                state.display,
                 style: const TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
-                angleMode == AngleMode.rad ? 'RAD' : 'DEG',
+                state.angleMode == AngleMode.rad ? 'RAD' : 'DEG',
                 style: const TextStyle(fontSize: 14, color: Colors.green),
               ),
             ],
           ),
         ),
-        // Buttons
+
+        // BUTTONS
         Expanded(
           child: GridView.count(
             crossAxisCount: 5,
             padding: const EdgeInsets.all(4),
             mainAxisSpacing: 4,
             crossAxisSpacing: 4,
-            children: [
-              CalculatorButton(
-                text: 'sin(',
-                color: Colors.blue.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: 'cos(',
-                color: Colors.blue.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: 'tan(',
-                color: Colors.blue.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: 'ln(',
-                color: Colors.blue.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: 'log(',
-                color: Colors.blue.shade700,
-                onPressed: onButtonPressed,
-              ),
-
-              CalculatorButton(
-                text: 'sqrt(',
-                color: Colors.blue.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '^',
-                color: Colors.blue.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: 'π',
-                color: Colors.blue.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: 'e',
-                color: Colors.blue.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: 'RAD/DEG',
-                color: Colors.green.shade700,
-                onPressed: onButtonPressed,
-              ),
-
-              CalculatorButton(
-                text: '7',
-                color: Colors.grey.shade800,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '8',
-                color: Colors.grey.shade800,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '9',
-                color: Colors.grey.shade800,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: 'C',
-                color: Colors.red.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: 'DEL',
-                color: Colors.red.shade700,
-                onPressed: onButtonPressed,
-              ),
-
-              CalculatorButton(
-                text: '4',
-                color: Colors.grey.shade800,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '5',
-                color: Colors.grey.shade800,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '6',
-                color: Colors.grey.shade800,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '*',
-                color: Colors.orange.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '/',
-                color: Colors.orange.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '1',
-                color: Colors.grey.shade800,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '2',
-                color: Colors.grey.shade800,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '3',
-                color: Colors.grey.shade800,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '+',
-                color: Colors.orange.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '-',
-                color: Colors.orange.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '0',
-                color: Colors.grey.shade800,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '.',
-                color: Colors.grey.shade800,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '=',
-                color: Colors.green.shade700,
-                onPressed: onButtonPressed,
-              ),
-              CalculatorButton(
-                text: '(',
-                color: Colors.grey.shade700,
-                onPressed: onButtonPressed,
-              ),
-
-              CalculatorButton(
-                text: ')',
-                color: Colors.grey.shade700,
-                onPressed: onButtonPressed,
-              ),
-            ],
+            children: _buttons(context),
           ),
         ),
       ],
     );
   }
 
-  TokenType _tokenType(String v) {
-    if ('0123456789'.contains(v)) return TokenType.number;
-    if (v == '.') return TokenType.decimal;
-    if ('+-*/^'.contains(v)) return TokenType.operator;
-    if (v == '(') return TokenType.leftParen;
-    if (v == ')') return TokenType.rightParen;
-    if (v == 'π' || v == 'e') return TokenType.constant;
-    return TokenType.function; // sin, cos, log, etc.
-  }
+  List<Widget> _buttons(BuildContext context) {
+    void press(String v) => context.read<CalculatorState>().input(v);
 
-  bool _canAppend(String value) {
-    if (expression.isEmpty) {
-      // Expression start rules
-      return !'*/^)'.contains(value);
-    }
+    Widget btn(String t, Color c) =>
+        CalculatorButton(text: t, color: c, onPressed: press);
 
-    final last = expression.characters.last;
-    final lastType = _tokenType(last);
-    final currType = _tokenType(value);
+    return [
+      btn('sin(', Colors.blue.shade700),
+      btn('cos(', Colors.blue.shade700),
+      btn('tan(', Colors.blue.shade700),
+      btn('ln(', Colors.blue.shade700),
+      btn('log(', Colors.blue.shade700),
 
-    // Operator rules
-    if (currType == TokenType.operator) {
-      if (lastType == TokenType.operator || lastType == TokenType.leftParen) {
-        // Allow unary minus
-        return value == '-';
-      }
-    }
+      btn('sqrt(', Colors.blue.shade700),
+      btn('^', Colors.blue.shade700),
+      btn('π', Colors.blue.shade700),
+      btn('e', Colors.blue.shade700),
+      btn('RAD/DEG', Colors.green.shade700),
 
-    // Decimal rules
-    if (currType == TokenType.decimal) {
-      // Prevent multiple decimals in same number
-      final parts = expression.split(RegExp(r'[+\-*/^()]'));
+      btn('7', Colors.grey.shade800),
+      btn('8', Colors.grey.shade800),
+      btn('9', Colors.grey.shade800),
+      btn('C', Colors.red.shade700),
+      btn('DEL', Colors.red.shade700),
 
-      return !parts.last.contains('.');
-    }
+      btn('4', Colors.grey.shade800),
+      btn('5', Colors.grey.shade800),
+      btn('6', Colors.grey.shade800),
+      btn('*', Colors.orange.shade700),
+      btn('/', Colors.orange.shade700),
 
-    // Right parenthesis rules
-    if (currType == TokenType.rightParen) {
-      if (_parenBalance == 0) return false;
-      if (lastType == TokenType.operator || lastType == TokenType.leftParen) {
-        return false;
-      }
-    }
+      btn('1', Colors.grey.shade800),
+      btn('2', Colors.grey.shade800),
+      btn('3', Colors.grey.shade800),
+      btn('+', Colors.orange.shade700),
+      btn('-', Colors.orange.shade700),
 
-    // Left parenthesis rules
-    if (currType == TokenType.leftParen) {
-      if (lastType == TokenType.number ||
-          lastType == TokenType.constant ||
-          lastType == TokenType.rightParen) {
-        // implicit multiplication allowed
-        return true;
-      }
-    }
+      btn('0', Colors.grey.shade800),
+      btn('.', Colors.grey.shade800),
+      btn('=', Colors.green.shade700),
+      btn('(', Colors.grey.shade700),
+      btn(')', Colors.grey.shade700),
 
-    return true;
+      btn('ANS', Colors.grey.shade700),
+      btn('MC', Colors.grey.shade700),
+      btn('MR', Colors.grey.shade700),
+      btn('M+', Colors.grey.shade700),
+      btn('M-', Colors.grey.shade700),
+    ];
   }
 }

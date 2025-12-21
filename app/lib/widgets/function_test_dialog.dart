@@ -1,15 +1,15 @@
+import 'package:app/core/evaluator/eval_context.dart';
+import 'package:app/core/evaluator/eval_types.dart';
+import 'package:app/core/evaluator/expression_evaluator.dart';
+import 'package:app/services/function_service.dart';
 import 'package:flutter/material.dart';
 import '../models/custom_function.dart';
-import '../utils/expression_evaluator.dart';
+import 'package:provider/provider.dart';
 
 class FunctionTestDialog extends StatefulWidget {
   final CustomFunction function;
-  final Map<String, FunctionDef> functions;
-  const FunctionTestDialog({
-    Key? key,
-    required this.function,
-    required this.functions,
-  }) : super(key: key);
+  const FunctionTestDialog({Key? key, required this.function})
+    : super(key: key);
 
   @override
   State<FunctionTestDialog> createState() => _FunctionTestDialogState();
@@ -47,11 +47,12 @@ class _FunctionTestDialogState extends State<FunctionTestDialog> {
           (_) => value,
         );
       }
+      final functionService = context.read<FunctionService>();
 
       final result = _evaluator.evaluate(
         expr,
         AngleMode.rad,
-        context: EvalContext(functions: widget.functions),
+        context: EvalContext(functions: functionService.functions),
       );
 
       setState(() {

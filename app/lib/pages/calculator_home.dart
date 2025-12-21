@@ -1,5 +1,7 @@
+import 'package:app/core/evaluator/eval_types.dart';
 import 'package:app/models/custom_function.dart';
-import 'package:app/utils/expression_evaluator.dart';
+import 'package:app/services/calculator_service.dart';
+import 'package:app/services/function_service.dart';
 import 'package:flutter/material.dart';
 import 'scientific_calculator_page.dart';
 import 'modulo_calculator_page.dart';
@@ -8,8 +10,19 @@ import 'base_n_calculator_page.dart';
 import 'conversion_page.dart';
 import 'custom_functions_page.dart';
 
+import 'package:provider/provider.dart';
+
+import '../state/calculator_state.dart';
+
 class CalculatorHome extends StatefulWidget {
-  const CalculatorHome({Key? key}) : super(key: key);
+  final CalculatorService calculatorService;
+  final FunctionService functionService;
+
+  const CalculatorHome({
+    super.key,
+    required this.calculatorService,
+    required this.functionService,
+  });
 
   @override
   State<CalculatorHome> createState() => _CalculatorHomeState();
@@ -17,54 +30,38 @@ class CalculatorHome extends StatefulWidget {
 
 class _CalculatorHomeState extends State<CalculatorHome> {
   int _selectedIndex = 0;
-  final Map<String, FunctionDef> _functions = {};
-
-  List<Widget> get _pages => [
-    ScientificCalculatorPage(functions: _functions),
-    ModuloCalculatorPage(),
-    MatrixCalculatorPage(),
-    BaseNCalculatorPage(),
-    ConversionPage(),
-    CustomFunctionsPage(
-      functions: _functions,
-      onFunctionsUpdated: _updateFunctions,
-    ),
-  ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Scientific Calculator'),
-        backgroundColor: const Color(0xFF1E1E1E),
-      ),
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.calculate),
-            label: 'Scientific',
-          ),
-          NavigationDestination(icon: Icon(Icons.percent), label: 'Modulo'),
-          NavigationDestination(icon: Icon(Icons.grid_on), label: 'Matrix'),
-          NavigationDestination(icon: Icon(Icons.tag), label: 'Base N'),
-          NavigationDestination(icon: Icon(Icons.swap_horiz), label: 'Convert'),
-          NavigationDestination(icon: Icon(Icons.functions), label: 'Custom'),
-        ],
+    return ChangeNotifierProvider(
+      create: (_) =>
+          CalculatorState(widget.calculatorService, widget.functionService),
+      child: Scaffold(
+        body: _pages[_selectedIndex],
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (i) => setState(() => _selectedIndex = i),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calculate),
+              label: 'Calculator',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.functions),
+              label: 'Functions',
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _updateFunctions(List<CustomFunction> list) {
-    _functions.clear();
-    for (final f in list) {
-      _functions[f.name] = FunctionDef(f.parameters, f.formula);
-    }
-  }
+  List<Widget> get _pages => const [
+    ScientificCalculatorPage(),
+    ModuloCalculatorPage(),
+    MatrixCalculatorPage(),
+    BaseNCalculatorPage(),
+    ConversionPage(),
+    CustomFunctionsPage(),
+  ];
 }

@@ -1,56 +1,11 @@
 import 'dart:math' as math;
 
-enum AngleMode { rad, deg }
-
-sealed class EvaluationResult {
-  const EvaluationResult();
-}
-
-class EvalSuccess extends EvaluationResult {
-  final double value;
-  const EvalSuccess(this.value);
-}
-
-class EvalError extends EvaluationResult {
-  final EvalErrorType type;
-  final String message;
-  const EvalError(this.type, this.message);
-}
-
-enum EvalErrorType { syntax, divisionByZero, domain, unknown }
-
-class RecursionGuard {
-  final int depth;
-  final int maxDepth;
-
-  const RecursionGuard(this.depth, this.maxDepth);
-
-  RecursionGuard next() {
-    if (depth >= maxDepth) {
-      throw const EvalError(
-        EvalErrorType.domain,
-        'Maximum recursion depth exceeded',
-      );
-    }
-    return RecursionGuard(depth + 1, maxDepth);
-  }
-}
-
-class FunctionDef {
-  final List<String> params;
-  final String body;
-
-  const FunctionDef(this.params, this.body);
-}
-
-class EvalContext {
-  final Map<String, double> variables;
-  final Map<String, FunctionDef> functions;
-
-  const EvalContext({this.variables = const {}, this.functions = const {}});
-}
+import 'package:app/core/evaluator/eval_context.dart';
+import 'package:app/core/evaluator/eval_types.dart';
 
 class ExpressionEvaluator {
+  final Map<String, double> _cache = {};
+
   EvaluationResult evaluate(
     String expr,
     AngleMode mode, {
@@ -58,9 +13,20 @@ class ExpressionEvaluator {
     RecursionGuard guard = const RecursionGuard(0, 32),
   }) {
     try {
+      final funcSig = context.functions.entries
+          .map((e) => '${e.key}(${e.value.params.join(",")}):${e.value.body}')
+          .join('|');
+
+      final key = '$expr|$mode|${context.variables}|$funcSig';
+
+      if (_cache.containsKey(key)) {
+        return EvalSuccess(_cache[key]!);
+      }
+
       final tokens = _insertImplicitMultiplication(_tokenize(expr));
       final postfix = _toPostfix(tokens);
       final result = _evalPostfix(postfix, mode, context, guard);
+      _cache[key] = result;
       return EvalSuccess(result);
     } on EvalError catch (e) {
       return e;
@@ -100,6 +66,7 @@ class ExpressionEvaluator {
 
         if (c == ',') {
           tokens.add(',');
+          continue;
         }
 
         if ('+-*/^()'.contains(c)) {
@@ -128,8 +95,7 @@ class ExpressionEvaluator {
   List<String> _insertImplicitMultiplication(List<String> t) {
     final out = <String>[];
 
-    bool isValue(String x) => _isNumber(x) || x == ')' || _isFunction(x);
-
+    bool isValue(String x) => _isNumber(x) || x == ')';
     bool isStart(String x) => _isNumber(x) || x == '(' || _isFunction(x);
 
     for (int i = 0; i < t.length; i++) {
@@ -299,23 +265,6 @@ class ExpressionEvaluator {
             stack.add(v.abs());
             break;
 
-          case 'mod':
-            if (stack.length < 2) {
-              throw const EvalError(
-                EvalErrorType.syntax,
-                'mod(a,b) needs 2 args',
-              );
-            }
-            final b = stack.removeLast();
-            final a = stack.removeLast();
-            if (b == 0) {
-              throw const EvalError(
-                EvalErrorType.divisionByZero,
-                'mod by zero',
-              );
-            }
-            stack.add(a - b * (a / b).floor());
-            break;
           case 'fact':
             if (v < 0 || v != v.floor()) {
               throw const EvalError(
@@ -341,6 +290,16 @@ class ExpressionEvaluator {
           throw EvalError(EvalErrorType.syntax, 'Unknown variable: $tok');
         }
         stack.add(context.variables[tok]!);
+      } else if (tok == 'mod') {
+        if (stack.length < 2) {
+          throw const EvalError(EvalErrorType.syntax, 'mod(a,b) needs 2 args');
+        }
+        final b = stack.removeLast();
+        final a = stack.removeLast();
+        if (b == 0) {
+          throw const EvalError(EvalErrorType.divisionByZero, 'mod by zero');
+        }
+        stack.add(a - b * (a / b).floor());
       } else {
         if (stack.length < 2) {
           throw const EvalError(EvalErrorType.syntax, 'Binary operator error');
@@ -392,5 +351,5 @@ class ExpressionEvaluator {
     'fact',
   }.contains(s);
   bool _isIdentifier(String s) =>
-      RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(s);
+      RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(s) && !_isFunction(s);
 }

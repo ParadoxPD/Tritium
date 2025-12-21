@@ -4,8 +4,11 @@ import 'package:app/core/evaluator/expression_evaluator.dart';
 import 'package:app/repositories/memory_repository.dart';
 import 'package:app/core/evaluator/eval_context.dart';
 import 'package:app/core/evaluator/eval_types.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
   late CalculatorService service;
 
   setUp(() {

@@ -5,8 +5,11 @@ import 'package:app/services/function_service.dart';
 import 'package:app/core/evaluator/expression_evaluator.dart';
 import 'package:app/repositories/memory_repository.dart';
 import 'package:app/repositories/function_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
   late CalculatorState state;
 
   setUp(() {

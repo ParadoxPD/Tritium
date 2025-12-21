@@ -11,6 +11,9 @@ class CalculatorService {
   double? _ans;
   double _memory = 0.0;
 
+  double? get ans => _ans;
+  double get memory => _memory;
+
   CalculatorService(this._evaluator, this._memoryRepo);
 
   Future<void> restore() async {

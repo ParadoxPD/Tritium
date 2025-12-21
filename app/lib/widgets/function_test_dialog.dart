@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import '../models/custom_function.dart';
+import '../utils/expression_evaluator.dart';
 
 class FunctionTestDialog extends StatefulWidget {
   final CustomFunction function;
@@ -15,108 +15,53 @@ class FunctionTestDialog extends StatefulWidget {
 class _FunctionTestDialogState extends State<FunctionTestDialog> {
   final Map<String, TextEditingController> _controllers = {};
   String _result = '';
+  final ExpressionEvaluator _evaluator = ExpressionEvaluator();
 
   @override
   void initState() {
     super.initState();
-    for (var param in widget.function.parameters) {
-      _controllers[param] = TextEditingController();
+    for (final p in widget.function.parameters) {
+      _controllers[p] = TextEditingController();
     }
   }
 
   void _calculate() {
     try {
-      String formula = widget.function.formula;
+      String expr = widget.function.formula;
 
-      for (var param in widget.function.parameters) {
-        final value = _controllers[param]!.text;
+      for (final param in widget.function.parameters) {
+        final value = _controllers[param]!.text.trim();
         if (value.isEmpty) {
-          throw Exception('All parameters must have values');
+          throw const EvalError(
+            EvalErrorType.syntax,
+            'All parameters must have values',
+          );
         }
-        formula = formula.replaceAll(param, value);
+
+        // Replace only whole identifiers
+        expr = expr.replaceAllMapped(
+          RegExp(r'\b' + RegExp.escape(param) + r'\b'),
+          (_) => value,
+        );
       }
 
-      formula = formula.replaceAll('^', 'pow');
-      final result = _evaluateFormula(formula);
+      final result = _evaluator.evaluate(expr, AngleMode.rad);
 
       setState(() {
-        _result = result.toStringAsFixed(6);
+        if (result is EvalSuccess) {
+          _result = result.value
+              .toStringAsFixed(6)
+              .replaceFirst(RegExp(r'\.0+$'), '')
+              .replaceFirst(RegExp(r'(\.\d*?)0+$'), r'\1');
+        } else if (result is EvalError) {
+          _result = 'Error: ${result.message}';
+        }
       });
     } catch (e) {
       setState(() {
-        _result = 'Error: ${e.toString()}';
+        _result = 'Error';
       });
     }
-  }
-
-  double _evaluateFormula(String formula) {
-    formula = formula.replaceAll(' ', '');
-    return _evalExpression(formula);
-  }
-
-  double _evalExpression(String expr) {
-    while (expr.contains('(')) {
-      final start = expr.lastIndexOf('(');
-      final end = expr.indexOf(')', start);
-      final subExpr = expr.substring(start + 1, end);
-      final result = _evalExpression(subExpr);
-      expr =
-          expr.substring(0, start) +
-          result.toString() +
-          expr.substring(end + 1);
-    }
-
-    return _evalAddSub(expr);
-  }
-
-  double _evalAddSub(String expr) {
-    final regex = RegExp(r'([+\-])');
-    final matches = regex.allMatches(expr);
-
-    if (matches.isEmpty) return _evalMulDiv(expr);
-
-    final parts = expr.split(regex);
-    final ops = matches.map((m) => m.group(0)!).toList();
-
-    double result = _evalMulDiv(parts[0]);
-    for (int i = 0; i < ops.length; i++) {
-      final nextVal = _evalMulDiv(parts[i + 1]);
-      if (ops[i] == '+') {
-        result += nextVal;
-      } else {
-        result -= nextVal;
-      }
-    }
-    return result;
-  }
-
-  double _evalMulDiv(String expr) {
-    final regex = RegExp(r'([*/])');
-    final matches = regex.allMatches(expr);
-
-    if (matches.isEmpty) return _evalPow(expr);
-
-    final parts = expr.split(regex);
-    final ops = matches.map((m) => m.group(0)!).toList();
-
-    double result = _evalPow(parts[0]);
-    for (int i = 0; i < ops.length; i++) {
-      final nextVal = _evalPow(parts[i + 1]);
-      if (ops[i] == '*') {
-        result *= nextVal;
-      } else {
-        result /= nextVal;
-      }
-    }
-    return result;
-  }
-
-  double _evalPow(String expr) {
-    if (expr.startsWith('pow(') && expr.endsWith(')')) {
-      final args = expr.substring(4, expr.length - 1).split(',');
-      return math.pow(double.parse(args[0]), double.parse(args[1])).toDouble();
-    }
-    return double.parse(expr);
   }
 
   @override
@@ -127,21 +72,19 @@ class _FunctionTestDialogState extends State<FunctionTestDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ...widget.function.parameters
-                .map(
-                  (param) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: TextField(
-                      controller: _controllers[param],
-                      decoration: InputDecoration(
-                        labelText: param,
-                        border: const OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
+            ...widget.function.parameters.map(
+              (p) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: _controllers[p],
+                  decoration: InputDecoration(
+                    labelText: p,
+                    border: const OutlineInputBorder(),
                   ),
-                )
-                .toList(),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _calculate,
@@ -176,8 +119,8 @@ class _FunctionTestDialogState extends State<FunctionTestDialog> {
 
   @override
   void dispose() {
-    for (var controller in _controllers.values) {
-      controller.dispose();
+    for (final c in _controllers.values) {
+      c.dispose();
     }
     super.dispose();
   }

@@ -19,8 +19,13 @@ class CalculatorButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       ),
-      child: Text(text, style: const TextStyle(fontSize: 18)),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 18),
+      ),
     );
   }
 }

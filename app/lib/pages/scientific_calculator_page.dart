@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/calculator_button.dart';
 import '../utils/expression_evaluator.dart';
-import 'dart:math' as math;
 
 class ScientificCalculatorPage extends StatefulWidget {
   const ScientificCalculatorPage({Key? key}) : super(key: key);
@@ -14,7 +13,8 @@ class ScientificCalculatorPage extends StatefulWidget {
 class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
   String display = '0';
   String expression = '';
-  bool isRadians = true;
+
+  AngleMode angleMode = AngleMode.rad;
   final ExpressionEvaluator _evaluator = ExpressionEvaluator();
 
   void onButtonPressed(String value) {
@@ -23,11 +23,19 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
         display = '0';
         expression = '';
       } else if (value == '=') {
-        try {
-          display = _evaluator.evaluate(expression, isRadians);
-          expression = display;
-        } catch (e) {
+        final result = _evaluator.evaluate(expression, angleMode);
+
+        if (result is EvalSuccess) {
+          final formatted = result.value
+              .toStringAsFixed(10)
+              .replaceFirst(RegExp(r'\.0+$'), '')
+              .replaceFirst(RegExp(r'(\.\d*?)0+$'), r'\1');
+
+          display = formatted;
+          expression = formatted;
+        } else if (result is EvalError) {
           display = 'Error';
+          expression = '';
         }
       } else if (value == 'DEL') {
         if (expression.isNotEmpty) {
@@ -35,7 +43,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
           display = expression.isEmpty ? '0' : expression;
         }
       } else if (value == 'RAD/DEG') {
-        isRadians = !isRadians;
+        angleMode = angleMode == AngleMode.rad ? AngleMode.deg : AngleMode.rad;
       } else {
         if (display == '0' || display == 'Error') {
           expression = value;
@@ -72,7 +80,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                 ),
               ),
               Text(
-                isRadians ? 'RAD' : 'DEG',
+                angleMode == AngleMode.rad ? 'RAD' : 'DEG',
                 style: const TextStyle(fontSize: 14, color: Colors.green),
               ),
             ],
@@ -154,12 +162,12 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                 onPressed: onButtonPressed,
               ),
               CalculatorButton(
-                text: '/',
-                color: Colors.orange.shade700,
+                text: 'C',
+                color: Colors.red.shade700,
                 onPressed: onButtonPressed,
               ),
               CalculatorButton(
-                text: 'C',
+                text: 'DEL',
                 color: Colors.red.shade700,
                 onPressed: onButtonPressed,
               ),
@@ -185,11 +193,10 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                 onPressed: onButtonPressed,
               ),
               CalculatorButton(
-                text: 'DEL',
-                color: Colors.red.shade700,
+                text: '/',
+                color: Colors.orange.shade700,
                 onPressed: onButtonPressed,
               ),
-
               CalculatorButton(
                 text: '1',
                 color: Colors.grey.shade800,
@@ -206,16 +213,15 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                 onPressed: onButtonPressed,
               ),
               CalculatorButton(
-                text: '-',
+                text: '+',
                 color: Colors.orange.shade700,
                 onPressed: onButtonPressed,
               ),
               CalculatorButton(
-                text: '(',
-                color: Colors.grey.shade700,
+                text: '-',
+                color: Colors.orange.shade700,
                 onPressed: onButtonPressed,
               ),
-
               CalculatorButton(
                 text: '0',
                 color: Colors.grey.shade800,
@@ -232,10 +238,11 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                 onPressed: onButtonPressed,
               ),
               CalculatorButton(
-                text: '+',
-                color: Colors.orange.shade700,
+                text: '(',
+                color: Colors.grey.shade700,
                 onPressed: onButtonPressed,
               ),
+
               CalculatorButton(
                 text: ')',
                 color: Colors.grey.shade700,

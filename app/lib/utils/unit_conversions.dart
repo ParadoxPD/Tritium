@@ -7,7 +7,8 @@ class UnitConversions {
     'Volume',
   ];
 
-  static final Map<String, Map<String, double>> _conversions = {
+  // Multiplicative conversions only (NON-temperature)
+  static final Map<String, Map<String, double>> _factors = {
     'Length': {
       'meter': 1.0,
       'kilometer': 0.001,
@@ -24,7 +25,6 @@ class UnitConversions {
       'ounce': 35.274,
       'ton': 0.001,
     },
-    'Temperature': {'celsius': 1.0, 'fahrenheit': 1.0, 'kelvin': 1.0},
     'Area': {
       'square_meter': 1.0,
       'square_kilometer': 1e-6,
@@ -41,7 +41,15 @@ class UnitConversions {
   };
 
   static List<String> getUnitsForCategory(String category) {
-    return _conversions[category]!.keys.toList();
+    if (category == 'Temperature') {
+      return const ['celsius', 'fahrenheit', 'kelvin'];
+    }
+
+    final units = _factors[category];
+    if (units == null) {
+      throw Exception('Unknown category: $category');
+    }
+    return units.keys.toList();
   }
 
   static double convert(
@@ -54,27 +62,48 @@ class UnitConversions {
       return _convertTemperature(value, fromUnit, toUnit);
     }
 
-    final fromFactor = _conversions[category]![fromUnit]!;
-    final toFactor = _conversions[category]![toUnit]!;
+    final cat = _factors[category];
+    if (cat == null) {
+      throw Exception('Unknown category: $category');
+    }
+
+    final fromFactor = cat[fromUnit];
+    final toFactor = cat[toUnit];
+
+    if (fromFactor == null || toFactor == null) {
+      throw Exception('Invalid unit for $category');
+    }
+
+    // Convert via base unit
     return value * (toFactor / fromFactor);
   }
 
   static double _convertTemperature(double value, String from, String to) {
     double celsius;
-    if (from == 'celsius') {
-      celsius = value;
-    } else if (from == 'fahrenheit') {
-      celsius = (value - 32) * 5 / 9;
-    } else {
-      celsius = value - 273.15;
+
+    switch (from) {
+      case 'celsius':
+        celsius = value;
+        break;
+      case 'fahrenheit':
+        celsius = (value - 32) * 5 / 9;
+        break;
+      case 'kelvin':
+        celsius = value - 273.15;
+        break;
+      default:
+        throw Exception('Invalid temperature unit');
     }
 
-    if (to == 'celsius') {
-      return celsius;
-    } else if (to == 'fahrenheit') {
-      return celsius * 9 / 5 + 32;
-    } else {
-      return celsius + 273.15;
+    switch (to) {
+      case 'celsius':
+        return celsius;
+      case 'fahrenheit':
+        return celsius * 9 / 5 + 32;
+      case 'kelvin':
+        return celsius + 273.15;
+      default:
+        throw Exception('Invalid temperature unit');
     }
   }
 }

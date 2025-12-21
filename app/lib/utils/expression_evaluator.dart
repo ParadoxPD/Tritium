@@ -1,108 +1,253 @@
 import 'dart:math' as math;
 
-class ExpressionEvaluator {
-  String evaluate(String expr, bool isRadians) {
-    expr = expr.replaceAll('π', math.pi.toString());
-    expr = expr.replaceAll('e', math.e.toString());
-    expr = _handleScientificFunctions(expr, isRadians);
+enum AngleMode { rad, deg }
 
+sealed class EvaluationResult {
+  const EvaluationResult();
+}
+
+class EvalSuccess extends EvaluationResult {
+  final double value;
+  const EvalSuccess(this.value);
+}
+
+class EvalError extends EvaluationResult {
+  final EvalErrorType type;
+  final String message;
+  const EvalError(this.type, this.message);
+}
+
+enum EvalErrorType { syntax, divisionByZero, domain, unknown }
+
+class ExpressionEvaluator {
+  EvaluationResult evaluate(String expr, AngleMode mode) {
     try {
-      final result = _simpleEval(expr);
-      return result
-          .toStringAsFixed(10)
-          .replaceFirst(RegExp(r'\.0+$'), '')
-          .replaceFirst(RegExp(r'(\.\d*?)0+$'), r'\1');
+      final tokens = _insertImplicitMultiplication(_tokenize(expr));
+      final postfix = _toPostfix(tokens);
+      final result = _evalPostfix(postfix, mode);
+      return EvalSuccess(result);
+    } on EvalError catch (e) {
+      return e;
     } catch (e) {
-      throw Exception('Invalid expression');
+      return const EvalError(EvalErrorType.unknown, 'Unknown error');
     }
   }
 
-  String _handleScientificFunctions(String expr, bool isRadians) {
-    final double angle = isRadians ? 1 : math.pi / 180;
+  /* ===================== TOKENIZER ===================== */
 
-    expr = expr.replaceAllMapped(RegExp(r'sin\(([\d.]+)\)'), (match) {
-      return math.sin(double.parse(match.group(1)!) * angle).toString();
-    });
-    expr = expr.replaceAllMapped(RegExp(r'cos\(([\d.]+)\)'), (match) {
-      return math.cos(double.parse(match.group(1)!) * angle).toString();
-    });
-    expr = expr.replaceAllMapped(RegExp(r'tan\(([\d.]+)\)'), (match) {
-      return math.tan(double.parse(match.group(1)!) * angle).toString();
-    });
-    expr = expr.replaceAllMapped(RegExp(r'ln\(([\d.]+)\)'), (match) {
-      return math.log(double.parse(match.group(1)!)).toString();
-    });
-    expr = expr.replaceAllMapped(RegExp(r'log\(([\d.]+)\)'), (match) {
-      return (math.log(double.parse(match.group(1)!)) / math.ln10).toString();
-    });
-    expr = expr.replaceAllMapped(RegExp(r'sqrt\(([\d.]+)\)'), (match) {
-      return math.sqrt(double.parse(match.group(1)!)).toString();
-    });
+  List<String> _tokenize(String expr) {
+    expr = expr
+        .replaceAll('π', math.pi.toString())
+        .replaceAllMapped(
+          RegExp(r'(?<![\w.])e(?![\w.])'),
+          (_) => math.e.toString(),
+        );
 
-    return expr;
-  }
+    final tokens = <String>[];
+    final buf = StringBuffer();
 
-  double _simpleEval(String expr) {
-    final cleaned = expr.replaceAll(' ', '');
-    return _evalAddSub(cleaned);
-  }
-
-  double _evalAddSub(String expr) {
-    final parts = <String>[];
-    final ops = <String>[];
-    String current = '';
+    void flush() {
+      if (buf.isNotEmpty) {
+        tokens.add(buf.toString());
+        buf.clear();
+      }
+    }
 
     for (int i = 0; i < expr.length; i++) {
-      if (expr[i] == '+' || expr[i] == '-') {
-        if (current.isNotEmpty) {
-          parts.add(current);
-          ops.add(expr[i]);
-          current = '';
+      final c = expr[i];
+
+      if ('0123456789.'.contains(c)) {
+        buf.write(c);
+      } else {
+        flush();
+        if (c.trim().isEmpty) continue;
+
+        if ('+-*/^()'.contains(c)) {
+          if ((c == '-' || c == '+') &&
+              (tokens.isEmpty || '()+-*/^'.contains(tokens.last))) {
+            tokens.add(c == '-' ? 'u-' : 'u+');
+          } else {
+            tokens.add(c);
+          }
+        } else {
+          buf.write(c);
+          while (i + 1 < expr.length &&
+              RegExp(r'[a-z]').hasMatch(expr[i + 1])) {
+            buf.write(expr[++i]);
+          }
+          tokens.add(buf.toString());
+          buf.clear();
+        }
+      }
+    }
+    flush();
+    return tokens;
+  }
+
+  /* ===================== IMPLICIT MULTIPLICATION ===================== */
+
+  List<String> _insertImplicitMultiplication(List<String> t) {
+    final out = <String>[];
+    for (int i = 0; i < t.length; i++) {
+      out.add(t[i]);
+      if (i == t.length - 1) break;
+
+      final a = t[i];
+      final b = t[i + 1];
+
+      final left = _isNumber(a) || a == ')' || _isFunction(a);
+      final right = _isNumber(b) || b == '(' || _isFunction(b);
+
+      if (left && right) {
+        out.add('*');
+      }
+    }
+    return out;
+  }
+
+  /* ===================== SHUNTING YARD ===================== */
+
+  List<String> _toPostfix(List<String> tokens) {
+    final out = <String>[];
+    final stack = <String>[];
+
+    final prec = {'u+': 5, 'u-': 5, '^': 4, '*': 3, '/': 3, '+': 2, '-': 2};
+
+    final rightAssoc = {'^', 'u-', 'u+'};
+
+    for (final tok in tokens) {
+      if (_isNumber(tok)) {
+        out.add(tok);
+      } else if (_isFunction(tok)) {
+        stack.add(tok);
+      } else if (tok == '(') {
+        stack.add(tok);
+      } else if (tok == ')') {
+        while (stack.isNotEmpty && stack.last != '(') {
+          out.add(stack.removeLast());
+        }
+        if (stack.isEmpty) {
+          throw const EvalError(EvalErrorType.syntax, 'Mismatched parentheses');
+        }
+        stack.removeLast();
+        if (stack.isNotEmpty && _isFunction(stack.last)) {
+          out.add(stack.removeLast());
         }
       } else {
-        current += expr[i];
+        while (stack.isNotEmpty &&
+            prec.containsKey(stack.last) &&
+            (rightAssoc.contains(tok)
+                ? prec[stack.last]! > prec[tok]!
+                : prec[stack.last]! >= prec[tok]!)) {
+          out.add(stack.removeLast());
+        }
+        stack.add(tok);
       }
     }
-    if (current.isNotEmpty) parts.add(current);
 
-    double result = _evalMulDiv(parts[0]);
-    for (int i = 0; i < ops.length; i++) {
-      final nextVal = _evalMulDiv(parts[i + 1]);
-      if (ops[i] == '+') {
-        result += nextVal;
+    while (stack.isNotEmpty) {
+      if (stack.last == '(') {
+        throw const EvalError(EvalErrorType.syntax, 'Mismatched parentheses');
+      }
+      out.add(stack.removeLast());
+    }
+    return out;
+  }
+
+  /* ===================== POSTFIX ===================== */
+
+  double _evalPostfix(List<String> t, AngleMode mode) {
+    final stack = <double>[];
+    final angle = mode == AngleMode.rad ? 1.0 : math.pi / 180;
+
+    for (final tok in t) {
+      if (_isNumber(tok)) {
+        stack.add(double.parse(tok));
+      } else if (tok == 'u-') {
+        if (stack.isEmpty) {
+          throw const EvalError(EvalErrorType.syntax, 'Unary minus error');
+        }
+        stack.add(-stack.removeLast());
+      } else if (tok == 'u+') {
+        if (stack.isEmpty) {
+          throw const EvalError(EvalErrorType.syntax, 'Unary plus error');
+        }
+      } else if (_isFunction(tok)) {
+        if (stack.isEmpty) {
+          throw const EvalError(
+            EvalErrorType.syntax,
+            'Missing function argument',
+          );
+        }
+        final v = stack.removeLast();
+        switch (tok) {
+          case 'sin':
+            stack.add(math.sin(v * angle));
+            break;
+          case 'cos':
+            stack.add(math.cos(v * angle));
+            break;
+          case 'tan':
+            stack.add(math.tan(v * angle));
+            break;
+          case 'ln':
+            if (v <= 0) {
+              throw const EvalError(EvalErrorType.domain, 'ln(x) x<=0');
+            }
+            stack.add(math.log(v));
+            break;
+          case 'log':
+            if (v <= 0) {
+              throw const EvalError(EvalErrorType.domain, 'log(x) x<=0');
+            }
+            stack.add(math.log(v) / math.ln10);
+            break;
+          case 'sqrt':
+            if (v < 0) {
+              throw const EvalError(EvalErrorType.domain, 'sqrt(x) x<0');
+            }
+            stack.add(math.sqrt(v));
+            break;
+        }
       } else {
-        result -= nextVal;
+        if (stack.length < 2) {
+          throw const EvalError(EvalErrorType.syntax, 'Binary operator error');
+        }
+        final b = stack.removeLast();
+        final a = stack.removeLast();
+        switch (tok) {
+          case '+':
+            stack.add(a + b);
+            break;
+          case '-':
+            stack.add(a - b);
+            break;
+          case '*':
+            stack.add(a * b);
+            break;
+          case '/':
+            if (b == 0) {
+              throw const EvalError(
+                EvalErrorType.divisionByZero,
+                'Division by zero',
+              );
+            }
+            stack.add(a / b);
+            break;
+          case '^':
+            stack.add(math.pow(a, b).toDouble());
+            break;
+        }
       }
     }
-    return result;
+
+    if (stack.length != 1) {
+      throw const EvalError(EvalErrorType.syntax, 'Invalid expression');
+    }
+    return stack.single;
   }
 
-  double _evalMulDiv(String expr) {
-    final parts = expr.split(RegExp(r'[*/]'));
-    final ops = <String>[];
-    for (final char in expr.split('')) {
-      if (char == '*' || char == '/') ops.add(char);
-    }
-
-    double result = _evalPower(parts[0]);
-    for (int i = 0; i < ops.length; i++) {
-      final nextVal = _evalPower(parts[i + 1]);
-      if (ops[i] == '*') {
-        result *= nextVal;
-      } else {
-        result /= nextVal;
-      }
-    }
-    return result;
-  }
-
-  double _evalPower(String expr) {
-    if (expr.contains('^')) {
-      final parts = expr.split('^');
-      return math
-          .pow(double.parse(parts[0]), double.parse(parts[1]))
-          .toDouble();
-    }
-    return double.parse(expr);
-  }
+  bool _isNumber(String s) => double.tryParse(s) != null;
+  bool _isFunction(String s) =>
+      const {'sin', 'cos', 'tan', 'ln', 'log', 'sqrt'}.contains(s);
 }

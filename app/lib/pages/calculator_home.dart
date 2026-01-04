@@ -1,5 +1,3 @@
-import 'package:app/core/evaluator/eval_types.dart';
-import 'package:app/models/custom_function.dart';
 import 'package:app/services/calculator_service.dart';
 import 'package:app/services/function_service.dart';
 import 'package:flutter/material.dart';
@@ -33,19 +31,37 @@ class _CalculatorHomeState extends State<CalculatorHome> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) =>
-          CalculatorState(widget.calculatorService, widget.functionService),
+    return MultiProvider(
+      providers: [
+        Provider<FunctionService>.value(value: widget.functionService),
+        Provider<CalculatorService>.value(value: widget.calculatorService),
+        ChangeNotifierProvider(
+          create: (_) =>
+              CalculatorState(widget.calculatorService, widget.functionService),
+        ),
+      ],
       child: Scaffold(
         body: _pages[_selectedIndex],
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: (i) => setState(() => _selectedIndex = i),
+          selectedItemColor: Colors.white, // Color for the active item
+          unselectedItemColor: Colors.white60, // Color for inactive items
+          type:
+              BottomNavigationBarType.fixed, // Keeps labels visible and stable
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.calculate),
               label: 'Calculator',
             ),
+            BottomNavigationBarItem(icon: Icon(Icons.percent), label: 'Modulo'),
+            BottomNavigationBarItem(icon: Icon(Icons.grid_on), label: 'Matrix'),
+            BottomNavigationBarItem(icon: Icon(Icons.tag), label: 'Base N'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.swap_horiz),
+              label: 'Convert',
+            ),
+
             BottomNavigationBarItem(
               icon: Icon(Icons.functions),
               label: 'Functions',

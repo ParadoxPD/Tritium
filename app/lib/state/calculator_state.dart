@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:characters/characters.dart';
 
 import '../services/calculator_service.dart';
 import '../services/function_service.dart';
 import '../core/evaluator/eval_context.dart';
 import '../core/evaluator/eval_types.dart';
-import '../core/evaluator/expression_evaluator.dart';
 
 class CalculatorState extends ChangeNotifier {
   final CalculatorService calculator;
@@ -13,6 +11,7 @@ class CalculatorState extends ChangeNotifier {
 
   String display = '0';
   String expression = '';
+  int cursor = 0;
   AngleMode angleMode = AngleMode.rad;
 
   int _parenBalance = 0;
@@ -54,7 +53,7 @@ class CalculatorState extends ChangeNotifier {
       return;
     }
     if (value == 'MR') {
-      _append(calculator.memoryRecall().toString());
+      _insert(calculator.memoryRecall().toString());
       return;
     }
     if (value == 'M+') {
@@ -68,7 +67,7 @@ class CalculatorState extends ChangeNotifier {
 
     // APPEND (GRAMMAR-GUARDED)
     if (!_canAppend(value)) return;
-    _append(value);
+    _insert(value);
   }
 
   // ===============================
@@ -79,14 +78,18 @@ class CalculatorState extends ChangeNotifier {
     display = '0';
     expression = '';
     _parenBalance = 0;
+    cursor = 0;
     notifyListeners();
   }
 
   void _delete() {
-    if (expression.isEmpty) return;
+    if (cursor == 0 || expression.isEmpty) return;
 
-    final removed = expression.characters.last;
-    expression = expression.substring(0, expression.length - 1);
+    final removed = expression[cursor - 1];
+
+    expression = expression.replaceRange(cursor - 1, cursor, '');
+
+    cursor--;
 
     if (removed == '(') _parenBalance--;
     if (removed == ')') _parenBalance++;
@@ -95,8 +98,10 @@ class CalculatorState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _append(String value) {
-    expression += value;
+  void _insert(String value) {
+    expression = expression.replaceRange(cursor, cursor, value);
+
+    cursor += value.length;
     display = expression;
 
     if (value == '(') _parenBalance++;
@@ -145,11 +150,12 @@ class CalculatorState extends ChangeNotifier {
       return !'*/^)'.contains(value);
     }
 
-    final last = expression.characters.last;
+    final left = cursor == 0 ? '' : expression[cursor - 1];
+    final right = cursor == expression.length ? '' : expression[cursor];
 
     // Operators
     if ('+-*/^'.contains(value)) {
-      if ('+-*/^('.contains(last)) {
+      if (left.isEmpty || '+-*/^('.contains(left)) {
         return value == '-'; // unary minus only
       }
     }
@@ -163,9 +169,28 @@ class CalculatorState extends ChangeNotifier {
     // Right parenthesis
     if (value == ')') {
       if (_parenBalance == 0) return false;
-      if ('+-*/^('.contains(last)) return false;
+      if (right.isEmpty || '+-*/^('.contains(right)) return false;
     }
 
     return true;
+  }
+
+  void moveCursorLeft() {
+    if (cursor > 0) {
+      cursor--;
+      notifyListeners();
+    }
+  }
+
+  void moveCursorRight() {
+    if (cursor < expression.length) {
+      cursor++;
+      notifyListeners();
+    }
+  }
+
+  void setCursor(int index) {
+    cursor = index.clamp(0, expression.length);
+    notifyListeners();
   }
 }

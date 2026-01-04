@@ -1,5 +1,4 @@
 import 'package:app/core/evaluator/eval_types.dart';
-import 'package:app/core/evaluator/expression_evaluator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/calculator_state.dart';
@@ -22,9 +21,36 @@ class ScientificCalculatorPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                state.expression,
-                style: const TextStyle(fontSize: 20, color: Colors.grey),
+              GestureDetector(
+                onTapDown: (details) {
+                  final box = context.findRenderObject() as RenderBox;
+                  final dx = details.localPosition.dx;
+
+                  final charWidth = 14.0; // approximate
+                  final index = (dx / charWidth).floor();
+
+                  state.setCursor(index);
+                },
+                child: RichText(
+                  text: TextSpan(
+                    children: [
+                      for (int i = 0; i <= state.expression.length; i++)
+                        TextSpan(
+                          text: i == state.cursor
+                              ? '|'
+                              : (i < state.expression.length
+                                    ? state.expression[i]
+                                    : ''),
+                          style: TextStyle(
+                            fontSize: 24,
+                            color: i == state.cursor
+                                ? Colors.green
+                                : Colors.white,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 10),
               Text(

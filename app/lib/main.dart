@@ -3,7 +3,9 @@ import 'package:app/repositories/function_repository.dart';
 import 'package:app/repositories/memory_repository.dart';
 import 'package:app/services/calculator_service.dart';
 import 'package:app/services/function_service.dart';
+import 'package:app/theme/theme_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'pages/calculator_home.dart';
 
 void main() async {
@@ -20,9 +22,12 @@ void main() async {
   await functionService.restore();
 
   runApp(
-    CalculatorApp(
-      calculatorService: calculatorService,
-      functionService: functionService,
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: CalculatorApp(
+        calculatorService: calculatorService,
+        functionService: functionService,
+      ),
     ),
   );
 }
@@ -39,16 +44,11 @@ class CalculatorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+
     return MaterialApp(
       title: 'Scientific Calculator',
-      theme: ThemeData.dark().copyWith(
-        primaryColor: const Color(0xFF1E1E1E),
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF4CAF50),
-          secondary: Color(0xFF03DAC6),
-        ),
-      ),
+      theme: theme.theme,
       home: CalculatorHome(
         calculatorService: calculatorService,
         functionService: functionService,

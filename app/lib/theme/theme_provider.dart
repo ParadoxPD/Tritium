@@ -119,4 +119,61 @@ class ThemeProvider extends ChangeNotifier {
   static AppThemeData of(BuildContext context, {bool listen = true}) {
     return Provider.of<ThemeProvider>(context, listen: listen).currentTheme;
   }
+
+  static AppThemeData getThemeData(ThemeType type) {
+    switch (type) {
+      case ThemeType.oneDarkPro:
+        return OneDarkProTheme();
+      case ThemeType.gruvbox:
+        return GruvboxTheme();
+      case ThemeType.nord:
+        return NordTheme();
+      case ThemeType.tokyoNight:
+        return TokyoNightTheme();
+      case ThemeType.dracula:
+        return DraculaTheme();
+      case ThemeType.nightOwl:
+        return NightOwlTheme();
+      case ThemeType.githubDark:
+        return GitHubDarkTheme();
+      case ThemeType.monokai:
+        return MonokaiTheme();
+      case ThemeType.catppuccinMocha:
+        return CatppuccinMochaTheme();
+      case ThemeType.ayuDark:
+        return AyuDarkTheme();
+      case ThemeType.githubLight:
+        return GitHubLightTheme();
+      case ThemeType.oneLight:
+        return OneLightTheme();
+      case ThemeType.solarizedLight:
+        return SolarizedLightTheme();
+      case ThemeType.catppuccinLatte:
+        return CatppuccinLatteTheme();
+      case ThemeType.everforestLight:
+        return EverforestLightTheme();
+    }
+  }
+
+  // Add these to your ThemeProvider class
+  List<ThemeType> get darkThemes => [
+    ThemeType.oneDarkPro,
+    ThemeType.gruvbox,
+    ThemeType.nord,
+    ThemeType.tokyoNight,
+    ThemeType.dracula,
+    ThemeType.nightOwl,
+    ThemeType.githubDark,
+    ThemeType.monokai,
+    ThemeType.catppuccinMocha,
+    ThemeType.ayuDark,
+  ];
+
+  List<ThemeType> get lightThemes => [
+    ThemeType.githubLight,
+    ThemeType.oneLight,
+    ThemeType.solarizedLight,
+    ThemeType.catppuccinLatte,
+    ThemeType.everforestLight,
+  ];
 }

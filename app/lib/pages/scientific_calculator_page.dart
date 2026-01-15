@@ -1,4 +1,5 @@
 import 'package:app/core/evaluator/eval_types.dart';
+import 'package:app/theme/theme_data.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/calculator_state.dart';
@@ -178,78 +179,108 @@ class ScientificCalculatorPage extends StatelessWidget {
   }
 
   void _showSettings(BuildContext context) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: '',
-      pageBuilder: (ctx, anim1, anim2) => const SizedBox(),
-      transitionBuilder: (ctx, anim1, anim2, child) {
-        final themeProvider = context.watch<ThemeProvider>();
-        final current = themeProvider.currentTheme;
+    // Local state for the toggle filter within the dialog
+    ThemeMode filterMode = ThemeMode.dark;
 
-        return Transform.scale(
-          scale: anim1.value,
-          child: Opacity(
-            opacity: anim1.value,
-            child: AlertDialog(
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final provider = context.watch<ThemeProvider>();
+            final current = provider.currentTheme;
+
+            // Filter the list based on the toggle
+            final filteredThemes = filterMode == ThemeMode.dark
+                ? provider.darkThemes
+                : provider.lightThemes;
+
+            return AlertDialog(
               backgroundColor: current.surface,
               title: Text(
                 'Appearance',
                 style: TextStyle(color: current.foreground),
               ),
+              contentPadding: const EdgeInsets.only(top: 20),
               content: SizedBox(
-                width: 300, // Fixed width prevents layout jumping
-                height: 400, // Fixed height makes it scrollable
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: ThemeType.values.length,
-                  itemBuilder: (context, index) {
-                    final type = ThemeType.values[index];
-                    final isSelected = themeProvider.themeType == type;
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? current.primary.withOpacity(0.1)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isSelected
-                              ? current.primary
-                              : Colors.transparent,
-                        ),
-                      ),
-                      child: ListTile(
-                        onTap: () => themeProvider.setTheme(type),
-                        leading: _buildColorPreview(type), // Tiny color dots
-                        title: Text(
-                          type.name
-                              .replaceAllMapped(
-                                RegExp(r'([A-Z])'),
-                                (m) => ' ${m.group(0)}',
-                              )
-                              .trim(),
-                          style: TextStyle(
-                            color: isSelected
-                                ? current.primary
-                                : current.foreground,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            fontSize: 14,
+                width: double.maxFinite,
+                height: 450,
+                child: Column(
+                  children: [
+                    // --- DARK/LIGHT FILTER TOGGLE ---
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: SegmentedButton<ThemeMode>(
+                        segments: const [
+                          ButtonSegment(
+                            value: ThemeMode.dark,
+                            icon: Icon(Icons.dark_mode_outlined),
+                            label: Text('Dark'),
                           ),
+                          ButtonSegment(
+                            value: ThemeMode.light,
+                            icon: Icon(Icons.light_mode_outlined),
+                            label: Text('Light'),
+                          ),
+                        ],
+                        selected: {filterMode},
+                        onSelectionChanged: (Set<ThemeMode> selection) {
+                          setDialogState(() => filterMode = selection.first);
+                        },
+                        style: SegmentedButton.styleFrom(
+                          selectedBackgroundColor: current.primary,
+                          selectedForegroundColor: current.background,
+                          side: BorderSide(color: current.subtle),
                         ),
-                        trailing: isSelected
-                            ? Icon(
-                                Icons.check_circle,
-                                color: current.primary,
-                                size: 20,
-                              )
-                            : null,
                       ),
-                    );
-                  },
+                    ),
+                    const SizedBox(height: 16),
+                    Divider(color: current.subtle, height: 1),
+
+                    // --- THEME LIST ---
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: filteredThemes.length,
+                        itemBuilder: (context, index) {
+                          final type = filteredThemes[index];
+                          final themeData = ThemeProvider.getThemeData(type);
+                          final isSelected = provider.themeType == type;
+
+                          return ListTile(
+                            onTap: () => provider.setTheme(type),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                            ),
+                            leading: _buildThemeSwatches(themeData),
+                            title: Text(
+                              type.name
+                                  .replaceAllMapped(
+                                    RegExp(r'([A-Z])'),
+                                    (m) => ' ${m.group(0)}',
+                                  )
+                                  .trim(),
+                              style: TextStyle(
+                                color: isSelected
+                                    ? themeData.primary
+                                    : current.foreground,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                            trailing: isSelected
+                                ? Icon(
+                                    Icons.check_circle,
+                                    color: themeData.primary,
+                                    size: 20,
+                                  )
+                                : null,
+                          );
+                        },
+                      ),
+                    ),
+                    Divider(color: current.subtle, height: 1),
+                  ],
                 ),
               ),
               actions: [
@@ -261,47 +292,36 @@ class ScientificCalculatorPage extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  // Helper to show 3 dots of the theme's colors in the list
-  Widget _buildColorPreview(ThemeType type) {
-    // This is a bit of a hack to get colors without switching the whole app theme
-    // You might want to move this logic to your ThemeProvider
+  // Builds the 3-dot color preview for the leading section of the ListTile
+  Widget _buildThemeSwatches(AppThemeData theme) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: const BoxDecoration(
-            color: Colors.blue,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 2),
-        Container(
-          width: 8,
-          height: 8,
-          decoration: const BoxDecoration(
-            color: Colors.green,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 2),
-        Container(
-          width: 8,
-          height: 8,
-          decoration: const BoxDecoration(
-            color: Colors.red,
-            shape: BoxShape.circle,
-          ),
-        ),
+        _dot(theme.primary),
+        const SizedBox(width: 4),
+        _dot(theme.success),
+        const SizedBox(width: 4),
+        _dot(theme.error),
       ],
+    );
+  }
+
+  Widget _dot(Color color) {
+    return Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.black12, width: 0.5),
+      ),
     );
   }
 }

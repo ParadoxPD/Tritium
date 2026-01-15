@@ -12,8 +12,10 @@ class MatrixCalculatorPage extends StatefulWidget {
 }
 
 class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
-  int rows1 = 2, cols1 = 2;
-  int rows2 = 2, cols2 = 2;
+  static List<int> sizes = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+  static int defaultSize = 3;
+  int rows1 = defaultSize, cols1 = defaultSize;
+  int rows2 = defaultSize, cols2 = defaultSize;
   List<List<double>> matrix1 = [
     [0, 0],
     [0, 0],
@@ -314,7 +316,7 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
         underline: const SizedBox(),
         dropdownColor: theme.panel,
         style: TextStyle(fontSize: 14, color: theme.foreground),
-        items: [2, 3, 4].map((i) {
+        items: sizes.map((i) {
           return DropdownMenuItem(
             value: i,
             child: Text('$i', style: TextStyle(color: theme.foreground)),

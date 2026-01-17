@@ -1,6 +1,8 @@
+import 'package:app/models/unit_models.dart';
+import 'package:app/services/conversion_service.dart';
+import 'package:app/services/unit_data.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../utils/unit_conversions.dart';
 import '../widgets/app_page.dart';
 import '../theme/theme_provider.dart';
 
@@ -12,385 +14,308 @@ class ConversionPage extends StatefulWidget {
 }
 
 class _ConversionPageState extends State<ConversionPage> {
-  final TextEditingController _inputController = TextEditingController();
-  String _category = 'Length';
-  String _fromUnit = 'meter';
-  String _toUnit = 'kilometer';
-  String _result = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _inputController.addListener(_autoConvert);
-  }
-
-  void _autoConvert() {
-    if (_inputController.text.isNotEmpty) {
-      _convert();
-    } else {
-      setState(() => _result = '');
-    }
-  }
-
-  void _convert() {
-    try {
-      final input = double.parse(_inputController.text);
-      final result = UnitConversions.convert(
-        input,
-        _category,
-        _fromUnit,
-        _toUnit,
-      );
-
-      setState(() {
-        _result = result.toStringAsFixed(6).replaceFirst(RegExp(r'\.?0+$'), '');
-      });
-    } catch (e) {
-      setState(() {
-        _result = '';
-      });
-    }
-  }
-
-  void _swapUnits() {
-    setState(() {
-      final temp = _fromUnit;
-      _fromUnit = _toUnit;
-      _toUnit = temp;
-      _convert();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final service = context.watch<ConversionService>();
     final theme = context.watch<ThemeProvider>().currentTheme;
-    final units = UnitConversions.getUnitsForCategory(_category);
 
     return AppPage(
-      title: 'Unit Converter',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Category Selection
-          ThemedCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Category',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: theme.primary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.panel,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: theme.subtle),
-                  ),
-                  child: DropdownButton<String>(
-                    value: _category,
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    dropdownColor: theme.panel,
-                    style: TextStyle(fontSize: 16, color: theme.foreground),
-                    icon: Icon(Icons.arrow_drop_down, color: theme.primary),
-                    items: UnitConversions.categories.map((c) {
-                      return DropdownMenuItem(
-                        value: c,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _getCategoryIcon(c),
-                              size: 20,
-                              color: theme.primary,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(c, style: TextStyle(color: theme.foreground)),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (v) {
-                      setState(() {
-                        _category = v!;
-                        final newUnits = UnitConversions.getUnitsForCategory(
-                          _category,
-                        );
-                        _fromUnit = newUnits[0];
-                        _toUnit = newUnits.length > 1
-                            ? newUnits[1]
-                            : newUnits[0];
-                        _convert();
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
+      title: 'Precision Converter',
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildGroupedDropdown(service, theme),
+            const SizedBox(height: 24),
 
-          const SizedBox(height: 16),
-
-          // Input Value
-          ThemedCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Value',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: theme.primary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _inputController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: theme.foreground,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: '0',
-                    prefixIcon: Icon(Icons.edit, color: theme.primary),
-                    suffixIcon: _inputController.text.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(Icons.clear, color: theme.muted),
-                            onPressed: () {
-                              _inputController.clear();
-                              setState(() => _result = '');
-                            },
-                          )
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Unit Selection
-          ThemedCard(
-            child: Column(
-              children: [
-                // From Unit
-                _buildUnitSelector(
-                  'From',
-                  _fromUnit,
-                  units,
-                  (v) => setState(() {
-                    _fromUnit = v!;
-                    _convert();
-                  }),
-                  theme,
-                ),
-
-                const SizedBox(height: 12),
-
-                // Swap Button
-                Center(
-                  child: IconButton(
-                    onPressed: _swapUnits,
-                    icon: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: theme.primary.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: theme.primary),
-                      ),
-                      child: Icon(
-                        Icons.swap_vert,
-                        color: theme.primary,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // To Unit
-                _buildUnitSelector(
-                  'To',
-                  _toUnit,
-                  units,
-                  (v) => setState(() {
-                    _toUnit = v!;
-                    _convert();
-                  }),
-                  theme,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Result
-          if (_result.isNotEmpty)
             ThemedCard(
-              color: theme.success.withOpacity(0.1),
+              padding: const EdgeInsets.all(20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.check_circle, color: theme.success),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Result',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: theme.success,
+                  _buildInputRow(service, theme, isSource: true),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: GestureDetector(
+                      onTap: service.swap,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 300),
+                        builder: (_, v, child) {
+                          return Transform.rotate(
+                            angle: v * 3.1416,
+                            child: child,
+                          );
+                        },
+                        child: Icon(
+                          Icons.swap_vert_circle,
+                          color: theme.primary,
+                          size: 32,
                         ),
                       ),
-                    ],
+                    ),
+                  ),
+                  _buildInputRow(service, theme, isSource: false),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGroupedDropdown(ConversionService service, dynamic theme) {
+    // Logic to group UnitData.categories by domain for the UI
+    return GestureDetector(
+      onTap: () => _openCategoryPicker(context, service, theme),
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.panel,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: theme.subtle),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(service.currentCategory.icon, color: theme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                service.currentCategory.name,
+                style: TextStyle(color: theme.foreground),
+              ),
+            ),
+            Icon(Icons.search, color: theme.muted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openCategoryPicker(
+    BuildContext context,
+    ConversionService service,
+    dynamic theme,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        String query = '';
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final filtered = UnitData.categories.where((c) {
+              return c.name.toLowerCase().contains(query.toLowerCase()) ||
+                  c.domain.toLowerCase().contains(query.toLowerCase());
+            }).toList();
+
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Search
+                  TextField(
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Search categories...',
+                      prefixIcon: Icon(Icons.search, color: theme.muted),
+                    ),
+                    onChanged: (v) => setState(() => query = v),
                   ),
                   const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.panel,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: theme.success, width: 2),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SelectableText(
-                          _result,
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
-                            color: theme.foreground,
+
+                  // List
+                  SizedBox(
+                    height: 400,
+                    child: ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (_, i) {
+                        final cat = filtered[i];
+                        return ListTile(
+                          leading: Icon(cat.icon, color: theme.primary),
+                          title: Text(
+                            cat.name,
+                            style: TextStyle(color: theme.foreground),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _formatUnitName(_toUnit),
-                          style: TextStyle(fontSize: 16, color: theme.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.panel,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${_inputController.text} ${_formatUnitName(_fromUnit)} = $_result ${_formatUnitName(_toUnit)}',
-                      style: TextStyle(fontSize: 14, color: theme.muted),
+                          subtitle: Text(
+                            cat.domain,
+                            style: TextStyle(color: theme.muted),
+                          ),
+                          onTap: () {
+                            service.setCategory(cat);
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
                     ),
                   ),
                 ],
               ),
-            ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
-  Widget _buildUnitSelector(
-    String label,
-    String value,
-    List<String> units,
-    Function(String?) onChanged,
-    dynamic theme,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.panel,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.subtle),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 60,
+  // Visual Hierarchy: Headers are bold and smaller, items are indented
+  List<DropdownMenuItem<CategoryDefinition>> _buildGroupedItems(dynamic theme) {
+    List<DropdownMenuItem<CategoryDefinition>> items = [];
+    String? lastDomain;
+
+    for (var cat in UnitData.categories) {
+      if (cat.domain != lastDomain) {
+        items.add(
+          DropdownMenuItem(
+            enabled: false,
             child: Text(
-              label,
+              cat.domain.toUpperCase(),
               style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: theme.muted,
+                color: theme.primary,
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
               ),
             ),
           ),
-          Expanded(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              underline: const SizedBox(),
+        );
+        lastDomain = cat.domain;
+      }
+      items.add(
+        DropdownMenuItem(
+          value: cat,
+          child: Row(
+            children: [
+              Icon(cat.icon, size: 18, color: theme.muted),
+              SizedBox(width: 12),
+              Text(cat.name, style: TextStyle(color: theme.foreground)),
+            ],
+          ),
+        ),
+      );
+    }
+    return items;
+  }
+
+  Widget _buildInputRow(
+    ConversionService service,
+    dynamic theme, {
+    required bool isSource,
+  }) {
+    final currentUnit = isSource ? service.fromUnit : service.toUnit;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // VALUE SECTION
+        Expanded(
+          flex: 3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isSource ? "From" : "To",
+                style: TextStyle(
+                  color: theme.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              isSource
+                  ? TextField(
+                      controller: TextEditingController(text: service.input)
+                        ..selection = TextSelection.collapsed(
+                          offset: service.input.length,
+                        ),
+                      onChanged: service.convert,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: theme.foreground,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: "0.00",
+                        hintStyle: TextStyle(color: theme.subtle),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    )
+                  : AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      transitionBuilder: (child, anim) =>
+                          FadeTransition(opacity: anim, child: child),
+                      child: Text(
+                        service.output.isEmpty ? "0.00" : service.output,
+                        key: ValueKey(service.output),
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: service.output.isEmpty
+                              ? theme.subtle
+                              : theme.primary,
+                        ),
+                      ),
+                    ),
+            ],
+          ),
+        ),
+
+        // UNIT SELECTOR SECTION
+        const SizedBox(width: 12),
+        Container(
+          height: 45,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: theme.panel,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: theme.subtle.withOpacity(0.5)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<UnitDefinition>(
+              value: currentUnit,
+              menuMaxHeight: 220,
+              icon: Icon(Icons.unfold_more, size: 18, color: theme.primary),
               dropdownColor: theme.panel,
-              style: TextStyle(fontSize: 16, color: theme.foreground),
-              items: units.map((u) {
+              items: service.currentCategory.units.map((unit) {
                 return DropdownMenuItem(
-                  value: u,
+                  value: unit,
                   child: Text(
-                    _formatUnitName(u),
-                    style: TextStyle(color: theme.foreground),
+                    unit.symbol,
+                    style: TextStyle(
+                      color: theme.foreground,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
                   ),
                 );
               }).toList(),
-              onChanged: onChanged,
+              onChanged: (newUnit) {
+                if (isSource) {
+                  service.updateUnits(from: newUnit);
+                } else {
+                  service.updateUnits(to: newUnit);
+                }
+              },
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
-  }
-
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'Length':
-        return Icons.straighten;
-      case 'Weight':
-        return Icons.fitness_center;
-      case 'Temperature':
-        return Icons.thermostat;
-      case 'Area':
-        return Icons.crop_square;
-      case 'Volume':
-        return Icons.water_drop;
-      default:
-        return Icons.calculate;
-    }
-  }
-
-  String _formatUnitName(String unit) {
-    return unit
-        .replaceAll('_', ' ')
-        .split(' ')
-        .map((word) {
-          return word[0].toUpperCase() + word.substring(1);
-        })
-        .join(' ');
-  }
-
-  @override
-  void dispose() {
-    _inputController.removeListener(_autoConvert);
-    _inputController.dispose();
-    super.dispose();
   }
 }

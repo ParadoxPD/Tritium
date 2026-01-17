@@ -2,6 +2,7 @@ import 'package:app/core/evaluator/expression_evaluator.dart';
 import 'package:app/repositories/function_repository.dart';
 import 'package:app/repositories/memory_repository.dart';
 import 'package:app/services/calculator_service.dart';
+import 'package:app/services/conversion_service.dart';
 import 'package:app/services/function_service.dart';
 import 'package:app/theme/theme_provider.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ void main() async {
 
   final calculatorService = CalculatorService(evaluator, memoryRepo);
   final functionService = FunctionService(functionRepo);
+  final conversionService = ConversionService();
 
   await calculatorService.restore();
   await functionService.restore();
@@ -27,6 +29,7 @@ void main() async {
       child: CalculatorApp(
         calculatorService: calculatorService,
         functionService: functionService,
+        conversionService: conversionService,
       ),
     ),
   );
@@ -35,11 +38,13 @@ void main() async {
 class CalculatorApp extends StatelessWidget {
   final CalculatorService calculatorService;
   final FunctionService functionService;
+  final ConversionService conversionService;
 
   const CalculatorApp({
     Key? key,
     required this.calculatorService,
     required this.functionService,
+    required this.conversionService,
   }) : super(key: key);
 
   @override
@@ -52,6 +57,7 @@ class CalculatorApp extends StatelessWidget {
       home: CalculatorHome(
         calculatorService: calculatorService,
         functionService: functionService,
+        conversionService: conversionService,
       ),
     );
   }

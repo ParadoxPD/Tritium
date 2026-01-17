@@ -1,4 +1,5 @@
 import 'package:app/services/calculator_service.dart';
+import 'package:app/services/conversion_service.dart';
 import 'package:app/services/function_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,11 +15,13 @@ import '../theme/theme_provider.dart';
 class CalculatorHome extends StatefulWidget {
   final CalculatorService calculatorService;
   final FunctionService functionService;
+  final ConversionService conversionService;
 
   const CalculatorHome({
     super.key,
     required this.calculatorService,
     required this.functionService,
+    required this.conversionService,
   });
 
   @override
@@ -36,13 +39,18 @@ class _CalculatorHomeState extends State<CalculatorHome> {
       providers: [
         Provider<FunctionService>.value(value: widget.functionService),
         Provider<CalculatorService>.value(value: widget.calculatorService),
+
+        ChangeNotifierProvider<ConversionService>.value(
+          value: widget.conversionService,
+        ),
+
         ChangeNotifierProvider(
           create: (_) =>
               CalculatorState(widget.calculatorService, widget.functionService),
         ),
       ],
       child: Scaffold(
-        body: _pages[_selectedIndex],
+        body: IndexedStack(index: _selectedIndex, children: _pages),
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
             color: theme.surface,
@@ -141,12 +149,12 @@ class _CalculatorHomeState extends State<CalculatorHome> {
     );
   }
 
-  List<Widget> get _pages => const [
-    ScientificCalculatorPage(),
-    ModuloCalculatorPage(),
-    MatrixCalculatorPage(),
-    BaseNCalculatorPage(),
-    ConversionPage(),
-    CustomFunctionsPage(),
+  List<Widget> get _pages => [
+    const ScientificCalculatorPage(),
+    const ModuloCalculatorPage(),
+    const MatrixCalculatorPage(),
+    const BaseNCalculatorPage(),
+    const ConversionPage(),
+    const CustomFunctionsPage(),
   ];
 }

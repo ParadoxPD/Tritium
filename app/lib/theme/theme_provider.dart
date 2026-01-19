@@ -27,8 +27,10 @@ enum ThemeType {
 class ThemeProvider extends ChangeNotifier {
   AppThemeData _currentTheme = OneDarkProTheme();
   ThemeType _themeType = ThemeType.oneDarkPro;
+  ThemeMode _currentThemeGroup = ThemeMode.dark;
 
   static const _themeKey = 'selected_theme';
+  static const _themeGroupKey = 'selected_theme_group';
 
   ThemeProvider() {
     _loadTheme();
@@ -37,10 +39,12 @@ class ThemeProvider extends ChangeNotifier {
   AppThemeData get currentTheme => _currentTheme;
   ThemeData get theme => _currentTheme.toThemeData();
   ThemeType get themeType => _themeType;
+  ThemeMode get currentThemeGroup => _currentThemeGroup;
 
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
     final themeName = prefs.getString(_themeKey) ?? 'oneDarkPro';
+    final themeGroup = prefs.getString(_themeGroupKey) ?? 'dark';
 
     // Safely find the theme from the enum string
     _themeType = ThemeType.values.firstWhere(
@@ -48,16 +52,46 @@ class ThemeProvider extends ChangeNotifier {
       orElse: () => ThemeType.oneDarkPro,
     );
 
+    _currentThemeGroup = themeGroup == 'dark'
+        ? ThemeMode.dark
+        : ThemeMode.light;
+
     _updateTheme();
     notifyListeners(); // Ensure UI updates after loading from disk
   }
 
   Future<void> setTheme(ThemeType type) async {
     _themeType = type;
+    switch (_themeType) {
+      // Dark
+      case ThemeType.oneDarkPro:
+      case ThemeType.gruvbox:
+      case ThemeType.nord:
+      case ThemeType.tokyoNight:
+      case ThemeType.dracula:
+      case ThemeType.nightOwl:
+      case ThemeType.githubDark:
+      case ThemeType.monokai:
+      case ThemeType.catppuccinMocha:
+      case ThemeType.ayuDark:
+        _currentThemeGroup = ThemeMode.dark;
+        break;
+
+      // Light
+      case ThemeType.githubLight:
+      case ThemeType.oneLight:
+      case ThemeType.solarizedLight:
+      case ThemeType.catppuccinLatte:
+      case ThemeType.everforestLight:
+        _currentThemeGroup = ThemeMode.light;
+        break;
+    }
+
     _updateTheme();
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_themeKey, type.name);
+    await prefs.setString(_themeGroupKey, _currentThemeGroup.name);
 
     notifyListeners();
   }

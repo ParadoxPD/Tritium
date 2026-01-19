@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 class ConversionService extends ChangeNotifier {
   CategoryDefinition _currentCategory = UnitData.categories.first;
+  final TextEditingController inputController = TextEditingController();
   UnitDefinition? _fromUnit;
   UnitDefinition? _toUnit;
 

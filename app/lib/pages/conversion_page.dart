@@ -235,7 +235,7 @@ class _ConversionPageState extends State<ConversionPage> {
               const SizedBox(height: 4),
               isSource
                   ? TextField(
-                      controller: TextEditingController(text: service.input)
+                      controller: service.inputController
                         ..selection = TextSelection.collapsed(
                           offset: service.input.length,
                         ),

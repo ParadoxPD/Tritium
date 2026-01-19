@@ -50,9 +50,8 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
     );
   }
 
-  void _showModeMenu(BuildContext context) {
+  void _showModeMenu(BuildContext context, CalculatorState state) {
     final theme = context.read<ThemeProvider>().currentTheme;
-    final state = context.read<CalculatorState>();
 
     showModalBottomSheet(
       context: context,
@@ -112,18 +111,23 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                 'Angle Unit',
                 style: TextStyle(color: theme.foreground),
               ),
-              trailing: SegmentedButton<AngleMode>(
-                segments: const [
-                  ButtonSegment(value: AngleMode.deg, label: Text('DEG')),
-                  ButtonSegment(value: AngleMode.rad, label: Text('RAD')),
-                ],
-                selected: {state.angleMode},
-                onSelectionChanged: (Set<AngleMode> selection) {
-                  state.setAngleMode(selection.first);
-                },
-                style: SegmentedButton.styleFrom(
-                  selectedBackgroundColor: theme.primary,
-                  selectedForegroundColor: theme.background,
+              trailing: SizedBox(
+                child: AnimatedBuilder(
+                  animation: state,
+                  builder: (_, __) {
+                    return SegmentedButton<AngleMode>(
+                      segments: const [
+                        ButtonSegment(value: AngleMode.deg, label: Text('DEG')),
+                        ButtonSegment(value: AngleMode.rad, label: Text('RAD')),
+                      ],
+                      selected: {state.angleMode},
+                      onSelectionChanged: (s) => state.setAngleMode(s.first),
+                      style: SegmentedButton.styleFrom(
+                        selectedBackgroundColor: theme.primary,
+                        selectedForegroundColor: theme.background,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -208,7 +212,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                   const Spacer(),
                   IconButton(
                     icon: Icon(Icons.apps, color: theme.muted, size: 22),
-                    onPressed: () => _showModeMenu(context),
+                    onPressed: () => _showModeMenu(context, state),
                     tooltip: "Mode Menu",
                     visualDensity: VisualDensity.compact,
                   ),
@@ -404,7 +408,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
             : isControl
             ? theme.buttonSpecial
             : theme.surface,
-        textColor: theme.foreground,
+        textColor: theme.primaryTextColor,
         shiftColor: shiftColor,
         alphaColor: alphaColor,
         onPressed: customOnTap ?? () => _handlePress(label, shift, alpha),
@@ -426,7 +430,8 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       btn(
         'MODE',
         shift: 'SETUP',
-        customOnTap: () => _showModeMenu(context),
+        customOnTap: () =>
+            _showModeMenu(context, context.read<CalculatorState>()),
         isControl: true,
       ),
       btn(

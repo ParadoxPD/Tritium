@@ -256,6 +256,9 @@ abstract class AppThemeData {
   Color get muted;
   Color get subtle;
 
+  Color get primaryTextColor => Colors.white;
+  Color get secondaryTextColor => Colors.black;
+
   Color get primary;
   Color get secondary;
   Color get accent;
@@ -888,6 +891,12 @@ class GitHubLightTheme extends AppThemeData {
   Color get buttonClear => GitHubLightColors.red;
 
   @override
+  Color get primaryTextColor => Colors.black;
+
+  @override
+  Color get secondaryTextColor => Colors.white;
+
+  @override
   ThemeData toThemeData() {
     return super.toThemeData().copyWith(
       brightness: Brightness.light,
@@ -941,6 +950,12 @@ class OneLightTheme extends AppThemeData {
   Color get buttonEquals => OneLightColors.green;
   @override
   Color get buttonClear => OneLightColors.red;
+
+  @override
+  Color get primaryTextColor => Colors.black;
+
+  @override
+  Color get secondaryTextColor => Colors.white;
 }
 
 class SolarizedLightTheme extends AppThemeData {
@@ -984,6 +999,12 @@ class SolarizedLightTheme extends AppThemeData {
   Color get buttonEquals => SolarizedLightColors.green;
   @override
   Color get buttonClear => SolarizedLightColors.red;
+
+  @override
+  Color get primaryTextColor => Colors.black;
+
+  @override
+  Color get secondaryTextColor => Colors.white;
 }
 
 class CatppuccinLatteTheme extends AppThemeData {
@@ -1027,6 +1048,12 @@ class CatppuccinLatteTheme extends AppThemeData {
   Color get buttonEquals => CatppuccinLatteColors.green;
   @override
   Color get buttonClear => CatppuccinLatteColors.red;
+
+  @override
+  Color get primaryTextColor => Colors.black;
+
+  @override
+  Color get secondaryTextColor => Colors.white;
 }
 
 class EverforestLightTheme extends AppThemeData {
@@ -1070,4 +1097,10 @@ class EverforestLightTheme extends AppThemeData {
   Color get buttonEquals => EverforestLightColors.green;
   @override
   Color get buttonClear => EverforestLightColors.red;
+
+  @override
+  Color get primaryTextColor => Colors.black;
+
+  @override
+  Color get secondaryTextColor => Colors.white;
 }

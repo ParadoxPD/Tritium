@@ -11,16 +11,19 @@ class CalculatorState extends ChangeNotifier {
   final CalculatorService calculator;
   final FunctionService functions;
 
-  // Use TextEditingController for native cursor and scrolling support
   final TextEditingController controller = TextEditingController();
   final ScrollController textScrollController = ScrollController();
 
-  String display = '0'; // The result display (bottom line)
+  String display = '0';
   bool isShift = false;
   bool isAlpha = false;
   bool isHyp = false;
 
+  // Display modes
   AngleMode angleMode = AngleMode.rad;
+  BaseMode baseMode = BaseMode.decimal;
+  DisplayMode displayMode = DisplayMode.normal;
+  bool exactMode = false; // Show fractions when possible
 
   // Casio 991EX Variables
   final Map<String, double> _memory = {
@@ -37,34 +40,68 @@ class CalculatorState extends ChangeNotifier {
     'Ans': 0,
   };
 
+  // Advanced storage
+  final Map<String, Matrix> _matrices = {};
+  final Map<String, Complex> _complexVars = {};
+
   bool _isStoreMode = false;
   bool _isRecallMode = false;
   int _parenBalance = 0;
 
   CalculatorState(this.calculator, this.functions) {
     _loadPrefs();
-    // Listen to controller changes if needed,
-    // though we mostly update display on specific actions.
   }
 
   @override
   void dispose() {
     controller.dispose();
+    textScrollController.dispose();
     super.dispose();
   }
 
   Future<void> _loadPrefs() async {
-    angleMode = await AppPrefs.loadAngleMode();
+    final prefs = await SharedPreferences.getInstance();
+
+    final angleName = prefs.getString('angle_mode');
+    angleMode = AngleMode.values.firstWhere(
+      (e) => e.name == angleName,
+      orElse: () => AngleMode.rad,
+    );
+
+    final baseName = prefs.getString('base_mode');
+    baseMode = BaseMode.values.firstWhere(
+      (e) => e.name == baseName,
+      orElse: () => BaseMode.decimal,
+    );
+
+    final displayName = prefs.getString('display_mode');
+    displayMode = DisplayMode.values.firstWhere(
+      (e) => e.name == displayName,
+      orElse: () => DisplayMode.normal,
+    );
+
+    exactMode = prefs.getBool('exact_mode') ?? false;
+
     notifyListeners();
   }
 
+  Future<void> _savePrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('angle_mode', angleMode.name);
+    await prefs.setString('base_mode', baseMode.name);
+    await prefs.setString('display_mode', displayMode.name);
+    await prefs.setBool('exact_mode', exactMode);
+  }
+
   Map<String, double> get memory => _memory;
+  Map<String, Matrix> get matrices => _matrices;
+  Map<String, Complex> get complexVars => _complexVars;
   bool get isStoreMode => _isStoreMode;
 
-  // --- Input Handling ---
+  // ===================== INPUT HANDLING =====================
 
   void input(String value) {
-    // Handle special modes
+    // Special modes
     if (value == 'STO') {
       _isStoreMode = true;
       display = 'STO?';
@@ -79,7 +116,7 @@ class CalculatorState extends ChangeNotifier {
       return;
     }
 
-    // Handle store mode
+    // Store mode
     if (_isStoreMode) {
       if (_memory.containsKey(value)) {
         double? valToStore = double.tryParse(display);
@@ -94,7 +131,7 @@ class CalculatorState extends ChangeNotifier {
       return;
     }
 
-    // Handle recall mode
+    // Recall mode
     if (_isRecallMode) {
       if (_memory.containsKey(value)) {
         _insertAtCursor(value);
@@ -110,10 +147,11 @@ class CalculatorState extends ChangeNotifier {
       return;
     }
 
-    // RESET (Shift + AC)
     if (value == 'RESET') {
       _reset();
-      _memory.updateAll((key, value) => 0.0); // Clear memory too
+      _memory.updateAll((key, value) => 0.0);
+      _matrices.clear();
+      _complexVars.clear();
       return;
     }
 
@@ -127,40 +165,51 @@ class CalculatorState extends ChangeNotifier {
       return;
     }
 
-    // Cursor movement (handled by TextField mainly, but keeping programmatic hooks)
     if (value == '←') {
       _moveCursor(-1);
       return;
     }
+
     if (value == '→') {
       _moveCursor(1);
       return;
     }
 
-    // Map button labels to parseable syntax
+    // Mode toggles
+    if (value == 'DRG' || value == 'RAD' || value == 'DEG') {
+      toggleAngleMode();
+      return;
+    }
+
+    if (value == 'ENG') {
+      cycleDisplayMode();
+      return;
+    }
+
+    if (value == 'S⇔D') {
+      exactMode = !exactMode;
+      _savePrefs();
+      // Re-evaluate to show in new mode
+      if (display != '0') _evaluate();
+      return;
+    }
+
+    // Insert text
     String textToInsert = _mapButtonToSyntax(value);
     _insertAtCursor(textToInsert);
-    _updateText(textToInsert);
   }
 
-  // --- Logic Helpers ---
-
   void _insertAtCursor(String text) {
-    final textSelection = controller.selection;
-    final String currentText = controller.text;
+    final selection = controller.selection;
+    final currentText = controller.text;
 
     String newText;
     int newCursorPos;
 
-    if (textSelection.start >= 0) {
-      // We have a selection or a valid cursor position
-      final newStart = textSelection.start;
-      final newEnd = textSelection.end;
-
-      newText = currentText.replaceRange(newStart, newEnd, text);
-      newCursorPos = newStart + text.length;
+    if (selection.start >= 0) {
+      newText = currentText.replaceRange(selection.start, selection.end, text);
+      newCursorPos = selection.start + text.length;
     } else {
-      // Append to end if no cursor
       newText = currentText + text;
       newCursorPos = newText.length;
     }
@@ -168,12 +217,12 @@ class CalculatorState extends ChangeNotifier {
     controller.text = newText;
     controller.selection = TextSelection.collapsed(offset: newCursorPos);
 
-    // Track parentheses for auto-close logic
     final openCount = '('.allMatches(text).length;
     final closeCount = ')'.allMatches(text).length;
     _parenBalance += (openCount - closeCount);
 
     notifyListeners();
+    _scrollToEnd();
   }
 
   void _delete() {
@@ -182,7 +231,6 @@ class CalculatorState extends ChangeNotifier {
 
     if (text.isEmpty) return;
 
-    // Case 1: Range selected -> delete range
     if (!selection.isCollapsed) {
       final newText = text.replaceRange(selection.start, selection.end, '');
       controller.text = newText;
@@ -192,44 +240,54 @@ class CalculatorState extends ChangeNotifier {
       return;
     }
 
-    // Case 2: Cursor at start -> do nothing
     if (selection.baseOffset <= 0) return;
 
-    // Case 3: Intelligent deletion (detect functions like "sin(")
     int cursor = selection.baseOffset;
     int deleteCount = 1;
 
-    // Check backwards from cursor for known functions
-    if (cursor >= 4) {
-      final sub4 = text.substring(cursor - 4, cursor);
-      if ([
-        'sin(',
-        'cos(',
-        'tan(',
-        'log(',
-        'pol(',
-        'rec(',
-        'int(',
-      ].contains(sub4)) {
-        deleteCount = 4;
+    // Smart deletion for multi-char functions
+    final patterns = [
+      (7, ['asinh(', 'acosh(', 'atanh(']),
+      (6, ['deriv(', 'round(']),
+      (
+        5,
+        [
+          'asin(',
+          'acos(',
+          'atan(',
+          'sinh(',
+          'cosh(',
+          'tanh(',
+          'sqrt(',
+          'cbrt(',
+        ],
+      ),
+      (
+        4,
+        [
+          'sin(',
+          'cos(',
+          'tan(',
+          'log(',
+          'pol(',
+          'rec(',
+          'int(',
+          'det(',
+          'conj(',
+        ],
+      ),
+      (3, ['ln(', 'Re(', 'Im(']),
+    ];
+
+    for (final (len, funcs) in patterns) {
+      if (cursor >= len && deleteCount == 1) {
+        final sub = text.substring(cursor - len, cursor);
+        if (funcs.contains(sub)) {
+          deleteCount = len;
+          break;
+        }
       }
     }
-    if (cursor >= 5 && deleteCount == 1) {
-      final sub5 = text.substring(cursor - 5, cursor);
-      if ([
-        'asin(',
-        'acos(',
-        'atan(',
-        'sinh(',
-        'cosh(',
-        'tanh(',
-        'sqrt(',
-        'cbrt(',
-      ].contains(sub5)) {
-        deleteCount = 5;
-      }
-    }
-    // ... add other lengths if necessary
 
     final newText = text.replaceRange(cursor - deleteCount, cursor, '');
     controller.text = newText;
@@ -260,14 +318,11 @@ class CalculatorState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _recalculateParens(String currentText) {
-    final openCount = '('.allMatches(currentText).length;
-    final closeCount = ')'.allMatches(currentText).length;
-    _parenBalance = openCount - closeCount;
+  void _recalculateParens(String text) {
+    _parenBalance = '('.allMatches(text).length - ')'.allMatches(text).length;
   }
 
-  void _updateText(String newText) {
-    // Let UI settle, then scroll
+  void _scrollToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (textScrollController.hasClients) {
         textScrollController.animateTo(
@@ -277,11 +332,9 @@ class CalculatorState extends ChangeNotifier {
         );
       }
     });
-
-    notifyListeners();
   }
 
-  // --- Evaluation ---
+  // ===================== EVALUATION =====================
 
   void _evaluate() {
     String evalExpr = controller.text;
@@ -293,7 +346,7 @@ class CalculatorState extends ChangeNotifier {
       evalExpr += ')' * _parenBalance;
     }
 
-    // Handle memory math M+ / M-
+    // Handle memory operations
     if (evalExpr.contains('M+') || evalExpr.contains('M-')) {
       _handleMemoryMath(evalExpr);
       return;
@@ -302,46 +355,59 @@ class CalculatorState extends ChangeNotifier {
     final result = calculator.evaluate(
       evalExpr,
       angleMode,
-      EvalContext(functions: functions.functions, variables: _memory),
+      EvalContext(
+        functions: functions.functions,
+        variables: _memory,
+        matrices: _matrices,
+        complexVars: _complexVars,
+        baseMode: baseMode,
+        exactMode: exactMode,
+      ),
     );
 
     if (result is EvalSuccess) {
-      double val = result.value;
-      _memory['Ans'] = val;
-      display = _formatNumber(val);
+      _memory['Ans'] = result.value;
 
-      // Optional: Update expression to match result?
-      // Standard calculators usually keep the expression until new input.
-      // But clearing for next input is handled by UI logic often.
-      // For now, we leave the expression as is.
-    } else {
-      display = 'Math ERROR';
+      // Format based on result type and mode
+      if (result.matrix != null) {
+        display = _formatMatrix(result.matrix!);
+      } else if (result.complex != null) {
+        display = result.complex.toString();
+      } else if (result.fraction != null && exactMode) {
+        display = result.fraction.toString();
+      } else {
+        display = _formatNumber(result.value);
+      }
+    } else if (result is EvalError) {
+      display = result.message;
     }
+
     notifyListeners();
   }
 
   void _handleMemoryMath(String expr) {
     bool isAdd = expr.contains('M+');
-    // Simple logic: assume the expression is everything before M+
-    // In real casio, M+ evaluates the current expr and adds to M.
     String cleanExpr = expr.replaceAll('M+', '').replaceAll('M-', '');
-    if (cleanExpr.isEmpty) cleanExpr = display; // Use previous result if empty
+    if (cleanExpr.isEmpty) cleanExpr = display;
 
     final result = calculator.evaluate(
       cleanExpr,
       angleMode,
-      EvalContext(functions: functions.functions, variables: _memory),
+      EvalContext(
+        functions: functions.functions,
+        variables: _memory,
+        baseMode: baseMode,
+      ),
     );
 
     if (result is EvalSuccess) {
-      double val = result.value;
       if (isAdd) {
-        _memory['M'] = (_memory['M'] ?? 0) + val;
+        _memory['M'] = (_memory['M'] ?? 0) + result.value;
       } else {
-        _memory['M'] = (_memory['M'] ?? 0) - val;
+        _memory['M'] = (_memory['M'] ?? 0) - result.value;
       }
-      display = 'M = ${_memory['M']}';
-      controller.clear(); // Clear input after memory op
+      display = 'M = ${_formatNumber(_memory['M']!)}';
+      controller.clear();
       _parenBalance = 0;
     } else {
       display = 'Math ERROR';
@@ -349,17 +415,67 @@ class CalculatorState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ===================== FORMATTING =====================
+
   String _formatNumber(double val) {
-    if (val.isNaN) return 'Math ERROR';
-    if (val.isInfinite) return val > 0 ? '∞' : '-∞';
-    if (val.abs() >= 1e10 || (val.abs() < 1e-3 && val != 0)) {
-      return val.toStringAsExponential(9).replaceFirst(RegExp(r'0+e'), 'e');
+    if (baseMode != BaseMode.decimal) {
+      // For base-N mode, show integer part only
+      return NumberFormatter.formatBaseN(val.toInt(), baseMode);
     }
-    String str = val.toStringAsFixed(10);
-    return str.replaceFirst(RegExp(r'\.?0+$'), '');
+
+    return NumberFormatter.format(val, mode: displayMode, precision: 10);
   }
 
-  // --- Toggles & Setup ---
+  String _formatMatrix(Matrix m) {
+    final rows = <String>[];
+    for (final row in m.data) {
+      final values = row.map((v) => _formatNumber(v)).join(' ');
+      rows.add('[$values]');
+    }
+    return rows.join('\n');
+  }
+
+  // ===================== MODE TOGGLES =====================
+
+  void toggleAngleMode() {
+    angleMode = angleMode == AngleMode.rad ? AngleMode.deg : AngleMode.rad;
+    _savePrefs();
+    notifyListeners();
+  }
+
+  void setAngleMode(AngleMode mode) {
+    angleMode = mode;
+    _savePrefs();
+    notifyListeners();
+  }
+
+  void cycleDisplayMode() {
+    final modes = DisplayMode.values;
+    final index = modes.indexOf(displayMode);
+    displayMode = modes[(index + 1) % modes.length];
+    _savePrefs();
+
+    // Re-display in new format
+    if (display != '0' && display != 'Math ERROR') {
+      final val = double.tryParse(display);
+      if (val != null) {
+        display = _formatNumber(val);
+      }
+    }
+    notifyListeners();
+  }
+
+  void setBaseMode(BaseMode mode) {
+    baseMode = mode;
+    _savePrefs();
+    notifyListeners();
+  }
+
+  void toggleExactMode() {
+    exactMode = !exactMode;
+    _savePrefs();
+    if (display != '0') _evaluate();
+  }
 
   void toggleShift() {
     isShift = !isShift;
@@ -399,16 +515,7 @@ class CalculatorState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleAngleMode() {
-    angleMode = angleMode == AngleMode.rad ? AngleMode.deg : AngleMode.rad;
-    notifyListeners();
-  }
-
-  void setAngleMode(AngleMode mode) {
-    angleMode = mode;
-    AppPrefs.saveAngleMode(mode);
-    notifyListeners();
-  }
+  // ===================== BUTTON HANDLER =====================
 
   void handleButtonPress({
     required String primary,
@@ -417,13 +524,19 @@ class CalculatorState extends ChangeNotifier {
   }) {
     String toInput = primary;
 
+    // Handle hyperbolic variants
     if (isHyp) {
-      // Map hyp functions
-      if (shift == 'sinh⁻¹')
+      if (primary == 'sin')
+        toInput = 'sinh';
+      else if (primary == 'cos')
+        toInput = 'cosh';
+      else if (primary == 'tan')
+        toInput = 'tanh';
+      else if (shift == 'sin⁻¹')
         toInput = 'asinh';
-      else if (shift == 'cosh⁻¹')
+      else if (shift == 'cos⁻¹')
         toInput = 'acosh';
-      else if (shift == 'tanh⁻¹')
+      else if (shift == 'tan⁻¹')
         toInput = 'atanh';
     }
 
@@ -437,16 +550,17 @@ class CalculatorState extends ChangeNotifier {
       input(toInput);
     }
 
-    if (isHyp && isTrig(toInput)) {
+    // Clear HYP after trig use
+    if (isHyp && _isTrigFunction(toInput)) {
       clearHyp();
     }
   }
 
-  bool isTrig(String toInput) {
-    return (toInput.contains('sin') ||
-        toInput.contains('cos') ||
-        toInput.contains('tan'));
+  bool _isTrigFunction(String s) {
+    return s.contains('sin') || s.contains('cos') || s.contains('tan');
   }
+
+  // ===================== BUTTON MAPPING =====================
 
   String _mapButtonToSyntax(String value) {
     final map = {
@@ -454,12 +568,12 @@ class CalculatorState extends ChangeNotifier {
       'x!': '!',
       '×': '*',
       '÷': '/',
-      '^': '^',
-      '^2': '^2',
-      '^3': '^3',
+      'xⁿ': '^',
+      'x²': '^2',
+      'x³': '^3',
       '√': 'sqrt(',
-      '3√': 'cbrt(',
-      'n√': 'nthrt(',
+      '³√': 'cbrt(',
+      'ⁿ√': 'nthrt(',
       'log': 'log(',
       '10ˣ': '10^',
       'ln': 'ln(',
@@ -485,6 +599,7 @@ class CalculatorState extends ChangeNotifier {
       '°\'"': '°',
       'π': 'pi',
       'e': 'e',
+      'i': 'i', // Complex unit
       'Ran#': math.Random().nextDouble().toStringAsFixed(6),
       'Rnd': 'round(',
       'Abs': 'abs(',
@@ -495,27 +610,16 @@ class CalculatorState extends ChangeNotifier {
       '%': '%',
       'M+': 'M+',
       'M-': 'M-',
-      'ENG': 'ENG',
-      'CONST': 'CONST',
-      'CONV': 'CONV',
+      // Matrix
+      'det': 'det(',
+      'T': 'transpose(',
+      // Complex
+      'Re': 'Re(',
+      'Im': 'Im(',
+      'conj': 'conj(',
+      'arg': 'arg(',
     };
+
     return map[value] ?? value;
-  }
-}
-
-class AppPrefs {
-  static const _angleMode = 'angle_mode';
-  static Future<void> saveAngleMode(AngleMode mode) async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setString(_angleMode, mode.name);
-  }
-
-  static Future<AngleMode> loadAngleMode() async {
-    final prefs = await SharedPreferences.getInstance();
-    final v = prefs.getString(_angleMode);
-    return AngleMode.values.firstWhere(
-      (e) => e.name == v,
-      orElse: () => AngleMode.rad,
-    );
   }
 }

@@ -35,18 +35,20 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       _inputFocusNode.requestFocus();
     }
 
-    if (primary == 'STAT' || shift == 'STAT') {
+    // Check if SHIFT is active and shift parameter contains STAT/EQN
+    if (state.isShift && shift == 'STAT') {
       _navigateToStats();
       state.clearShift();
       return;
     }
 
-    if (primary == 'EQN' || shift == 'EQN') {
+    if (state.isShift && shift == 'EQN') {
       _navigateToEquation();
       state.clearShift();
       return;
     }
 
+    // Normal button press handling
     state.handleButtonPress(primary: primary, shift: shift, alpha: alpha);
   }
 
@@ -522,9 +524,9 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       btn('RCL', shift: 'STO', isFunction: true),
 
       // Row 4
-      btn('^2', shift: '√', alpha: '', isFunction: true),
-      btn('^3', shift: '3√', alpha: '', isFunction: true),
-      btn('^', shift: 'n√', alpha: 'D', isFunction: true),
+      btn('x²', shift: '√', alpha: '', isFunction: true),
+      btn('x³', shift: '³√', alpha: '', isFunction: true),
+      btn('xⁿ', shift: 'ⁿ√', alpha: 'D', isFunction: true),
       btn('(', shift: '', alpha: 'E', isOperator: true),
       btn(')', shift: '', alpha: 'F', isOperator: true),
 
@@ -558,7 +560,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       ), // Corrected alpha placement
       btn('×10ˣ', shift: 'π', alpha: 'e', isNumber: true),
       btn('Ans', shift: 'DRG', isFunction: true),
-      btn('=', shift: '%', isControl: true),
+      btn('=', shift: '≈', isControl: true),
     ];
   }
 

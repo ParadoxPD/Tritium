@@ -8,7 +8,7 @@ create:
 	dart run flutter_launcher_icons:main
 	flutter clean
 	flutter pub get
-	flutter build apk
+	flutter build apk --release
 	flutter install
 
 

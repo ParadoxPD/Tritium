@@ -37,6 +37,17 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    android.applicationVariants.all {
+    outputs.all {
+        val variantName = name
+        if (variantName == "release") {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
+                .outputFileName = "tritium.apk"
+        }
+    }
+}
+
 }
 
 flutter {

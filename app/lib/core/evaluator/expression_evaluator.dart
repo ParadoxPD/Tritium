@@ -22,8 +22,10 @@ class ExpressionEvaluator {
       if (context.baseMode != BaseMode.decimal) {
         expr = _convertBaseNLiterals(expr);
       }
+      final tokens = _rewriteRootPlaceholders(
+        _insertImplicitMultiplication(_tokenize(expr, context)),
+      );
 
-      final tokens = _insertImplicitMultiplication(_tokenize(expr, context));
       final postfix = _toPostfix(tokens, context);
       final result = _evalPostfix(postfix, mode, context, guard);
 
@@ -61,6 +63,7 @@ class ExpressionEvaluator {
   // ===================== TOKENIZER =====================
 
   List<String> _tokenize(String expr, EvalContext context) {
+    print(expr);
     // Replace constants
     expr = expr
         .replaceAll('π', math.pi.toString())
@@ -111,6 +114,11 @@ class ExpressionEvaluator {
           tokens.add(';');
           continue;
         }
+        if (c == '√') {
+          flush();
+          tokens.add('√');
+          continue;
+        }
 
         // Operators and parentheses
         if ('+-*/^()'.contains(c)) {
@@ -136,6 +144,68 @@ class ExpressionEvaluator {
     return tokens;
   }
 
+  List<String> _rewriteRootPlaceholders(List<String> tokens) {
+    final out = <String>[];
+
+    for (int i = 0; i < tokens.length; i++) {
+      if (tokens[i] == '√') {
+        // Check for index before √
+        String? index;
+        if (out.isNotEmpty && _isNumber(out.last)) {
+          index = out.removeLast();
+        }
+
+        // Determine radicand (what comes after √)
+        final radicandTokens = <String>[];
+        int j = i + 1;
+
+        if (j < tokens.length) {
+          if (tokens[j] == '(') {
+            // Collect entire parenthesized expression
+            int depth = 1;
+            radicandTokens.add(tokens[j]);
+            j++;
+
+            while (j < tokens.length && depth > 0) {
+              if (tokens[j] == '(') depth++;
+              if (tokens[j] == ')') depth--;
+              radicandTokens.add(tokens[j]);
+              j++;
+            }
+          } else if (_isNumber(tokens[j]) || _isIdentifier(tokens[j])) {
+            // Single token radicand
+            radicandTokens.add(tokens[j]);
+            j++;
+          }
+        }
+
+        // Build function call
+        if (index != null) {
+          // n√x → nthrt(x, n)
+          out.add('nthrt');
+          out.add('(');
+          out.addAll(radicandTokens);
+          out.add(',');
+          out.add(index);
+          out.add(')');
+        } else {
+          // √x → sqrt(x)
+          out.add('sqrt');
+          out.add('(');
+          out.addAll(radicandTokens);
+          out.add(')');
+        }
+
+        // Skip consumed tokens
+        i = j - 1;
+      } else {
+        out.add(tokens[i]);
+      }
+    }
+
+    return out;
+  }
+
   // ===================== IMPLICIT MULTIPLICATION =====================
 
   List<String> _insertImplicitMultiplication(List<String> t) {
@@ -143,7 +213,12 @@ class ExpressionEvaluator {
     bool isValue(String x) =>
         _isNumber(x) || x == ')' || x == ']' || x == '__I__';
     bool isStart(String x) =>
-        _isNumber(x) || x == '(' || x == '[' || _isFunction(x) || x == '__I__';
+        _isNumber(x) ||
+        x == '(' ||
+        x == '[' ||
+        _isFunction(x) ||
+        x == '__I__' ||
+        x == '√';
 
     for (int i = 0; i < t.length; i++) {
       out.add(t[i]);
@@ -166,17 +241,18 @@ class ExpressionEvaluator {
     final stack = <String>[];
 
     final prec = {
-      '!': 6,
-      'u+': 5,
-      'u-': 5,
-      '^': 4,
+      '!': 7,
+      '^': 6,
+      '√': 5,
+      'u+': 4,
+      'u-': 4,
       '*': 3,
       '/': 3,
       '+': 2,
       '-': 2,
     };
 
-    final rightAssoc = {'^', 'u-', 'u+'};
+    final rightAssoc = {'^', '√', 'u-', 'u+'};
 
     for (final tok in tokens) {
       if (_isNumber(tok)) {
@@ -217,6 +293,7 @@ class ExpressionEvaluator {
       } else {
         while (stack.isNotEmpty &&
             prec.containsKey(stack.last) &&
+            stack.last != '√' && // ⬅ ROOT MUST NOT POP AS BINARY
             (rightAssoc.contains(tok)
                 ? prec[stack.last]! > prec[tok]!
                 : prec[stack.last]! >= prec[tok]!)) {
@@ -285,6 +362,22 @@ class ExpressionEvaluator {
           throw const EvalError(EvalErrorType.domain, 'Factorial overflow');
         }
         stack.add(_factorial(v.toInt()).toDouble());
+      } else if (tok == '√') {
+        if (stack.isEmpty) {
+          throw const EvalError(
+            EvalErrorType.syntax,
+            'Missing radicand for root',
+          );
+        }
+
+        final radicand = stack.removeLast();
+
+        double index = 2.0;
+        if (stack.isNotEmpty && stack.last is double) {
+          index = stack.removeLast();
+        }
+
+        stack.add(_nthRoot(radicand, index));
       } else if (_isFunction(tok)) {
         _evalFunction(tok, stack, angle, mode, context, guard);
       } else if (_isIdentifier(tok)) {
@@ -309,6 +402,33 @@ class ExpressionEvaluator {
 
     final result = stack.single;
     return result is double ? result : result;
+  }
+
+  dynamic _nthRoot(dynamic x, dynamic n) {
+    final index = _toDouble(n);
+
+    if (index == 0) {
+      throw const EvalError(EvalErrorType.domain, '0th root undefined');
+    }
+
+    if (x is double) {
+      if (x < 0 && index % 2 == 0) {
+        return Complex.fromPolar(
+          math.pow(x.abs(), 1 / index).toDouble(),
+          (math.pi / index).toDouble(),
+        );
+      }
+      return math.pow(x, 1 / index).toDouble();
+    }
+
+    if (x is Complex) {
+      return Complex.fromPolar(
+        math.pow(x.magnitude, 1 / index).toDouble(),
+        (x.argument / index).toDouble(),
+      );
+    }
+
+    throw const EvalError(EvalErrorType.syntax, 'Invalid root operand');
   }
 
   void _evalFunction(
@@ -411,6 +531,56 @@ class ExpressionEvaluator {
         final v = _toDouble(stack.removeLast());
         stack.add(v < 0 ? -math.pow(-v, 1 / 3) : math.pow(v, 1 / 3));
         break;
+
+      case 'nthrt':
+        {
+          if (stack.length < 2) {
+            throw const EvalError(
+              EvalErrorType.syntax,
+              'nthrt(x,n) requires 2 arguments',
+            );
+          }
+
+          final n = _toDouble(stack.removeLast());
+          final x = stack.removeLast();
+
+          if (n == 0) {
+            throw const EvalError(
+              EvalErrorType.domain,
+              '0th root is undefined',
+            );
+          }
+
+          if (x is double) {
+            // Even root of negative → complex
+            if (x < 0 && n % 2 == 0) {
+              stack.add(
+                Complex.fromPolar(
+                  math.pow(x.abs(), 1 / n).toDouble(),
+                  (math.pi / n).toDouble(),
+                ),
+              );
+            } else {
+              stack.add(math.pow(x, 1 / n).toDouble());
+            }
+          } else if (x is Complex) {
+            // z^(1/n)
+            final r = x.magnitude;
+            final theta = x.argument;
+            stack.add(
+              Complex.fromPolar(
+                math.pow(r, 1 / n).toDouble(),
+                (theta / n).toDouble(),
+              ),
+            );
+          } else {
+            throw const EvalError(
+              EvalErrorType.syntax,
+              'Invalid argument to nthrt',
+            );
+          }
+          break;
+        }
 
       case 'abs':
         final v = stack.removeLast();
@@ -636,6 +806,7 @@ class ExpressionEvaluator {
     'log',
     'sqrt',
     'cbrt',
+    'nthrt',
     'abs',
     'round',
     'floor',
@@ -654,4 +825,12 @@ class ExpressionEvaluator {
 
   bool _isIdentifier(String s) =>
       RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(s) && !_isFunction(s);
+
+  bool _isValueToken(String t) =>
+      _isNumber(t) ||
+      t == ')' ||
+      t == ']' ||
+      t == '__I__' ||
+      _isIdentifier(t) ||
+      t == '√';
 }

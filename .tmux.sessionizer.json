@@ -1,0 +1,15 @@
+{
+  "defaults": {
+    "windows": 4,
+    "commands": {
+      "1": ["nvim ./app"],
+      "2": [
+        "flutter emulators --launch pixel_brokeaf",
+        "cd app",
+        "flutter run"
+      ],
+      "3": ["cd app"],
+      "4": []
+    }
+  }
+}

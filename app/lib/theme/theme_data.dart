@@ -1,4 +1,14 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+
+class OKLCH {
+  final double l; // 0..1
+  final double c; // chroma
+  final double h; // degrees 0..360
+
+  OKLCH(this.l, this.c, this.h);
+}
 
 /// Color palettes for different themes
 class OneDarkProColors {
@@ -275,49 +285,11 @@ abstract class AppThemeData {
   Color get buttonSpecial;
   Color get buttonEquals;
   Color get buttonClear;
-  Color get shiftColor => _getAdaptiveColor(warning, buttonSpecial);
-  Color get alphaColor => _getAdaptiveColor(accent, buttonSpecial);
 
-  // --- The Logic ---
-
-  Color _getAdaptiveColor(Color targetColor, Color backgroundColor) {
-    // 1. Determine if the button is Light or Dark
-    final bgLum = backgroundColor.computeLuminance();
-    final isLightBg =
-        bgLum > 0.5; // > 0.5 means it's a light color (White, Grey, Cream)
-
-    // 2. Convert our target (Shift/Alpha) to HSL for easier tuning
-    final hsl = HSLColor.fromColor(targetColor);
-
-    if (isLightBg) {
-      // === CASE A: LIGHT BUTTONS ===
-      // We need DARK text to be readable.
-
-      // SPECIAL FIX FOR YELLOW:
-      // Yellow (Hue 40-70) looks terrible when darkened (becomes olive).
-      // We shift it slightly towards Orange (Hue 30-35) and make it dark.
-      if (hsl.hue > 40 && hsl.hue < 80) {
-        return hsl
-            .withHue(35) // Shift towards Orange
-            .withSaturation(1.0) // Keep it vivid
-            .withLightness(0.35) // Darken significantly
-            .toColor();
-      }
-
-      // For other colors (like Red Alpha), just darken them.
-      // Lightness 0.35 is usually the "sweet spot" for reading on white.
-      return hsl.withLightness(0.35).withSaturation(0.9).toColor();
-    } else {
-      // === CASE B: DARK BUTTONS ===
-      // We need BRIGHT text (Neon effect).
-
-      // If the color is already bright enough, keep it.
-      // Otherwise, boost lightness to at least 0.6
-      double targetL = hsl.lightness < 0.6 ? 0.7 : hsl.lightness;
-
-      return hsl.withLightness(targetL).withSaturation(0.9).toColor();
-    }
-  }
+  Color shiftColor(Color background) =>
+      getOklchShiftAlphaColors(background).shift;
+  Color alphaColor(Color background) =>
+      getOklchShiftAlphaColors(background).alpha;
 
   // Generate Material ThemeData
   ThemeData toThemeData() {
@@ -414,6 +386,86 @@ abstract class AppThemeData {
 
       dividerTheme: DividerThemeData(color: subtle, thickness: 1),
     );
+  }
+
+  OKLCH rgbToOklch(Color color) {
+    // sRGB → linear
+    double lin(double x) => x <= 0.04045
+        ? x / 12.92
+        : math.pow((x + 0.055) / 1.055, 2.4).toDouble();
+
+    final r = lin(color.red / 255);
+    final g = lin(color.green / 255);
+    final b = lin(color.blue / 255);
+
+    // Linear RGB → OKLab
+    final l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+    final m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+    final s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+
+    final l3 = math.pow(l, 1 / 3).toDouble();
+    final m3 = math.pow(m, 1 / 3).toDouble();
+    final s3 = math.pow(s, 1 / 3).toDouble();
+
+    final L = 0.2104542553 * l3 + 0.7936177850 * m3 - 0.0040720468 * s3;
+    final a = 1.9779984951 * l3 - 2.4285922050 * m3 + 0.4505937099 * s3;
+    final b2 = 0.0259040371 * l3 + 0.7827717662 * m3 - 0.8086757660 * s3;
+
+    final c = math.sqrt(a * a + b2 * b2);
+    final h = (math.atan2(b2, a) * 180 / math.pi + 360) % 360;
+
+    return OKLCH(L, c, h);
+  }
+
+  Color oklchToRgb(OKLCH c) {
+    final hRad = c.h * math.pi / 180;
+    final a = c.c * math.cos(hRad);
+    final b = c.c * math.sin(hRad);
+
+    final l_ = c.l + 0.3963377774 * a + 0.2158037573 * b;
+    final m_ = c.l - 0.1055613458 * a - 0.0638541728 * b;
+    final s_ = c.l - 0.0894841775 * a - 1.2914855480 * b;
+
+    double cube(double x) => x * x * x;
+
+    final l = cube(l_);
+    final m = cube(m_);
+    final s = cube(s_);
+
+    final r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+    final g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+    final b2 = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+
+    double clamp(double x) => x.clamp(0.0, 1.0);
+
+    return Color.fromARGB(
+      255,
+      (clamp(r) * 255).round(),
+      (clamp(g) * 255).round(),
+      (clamp(b2) * 255).round(),
+    );
+  }
+
+  ({Color shift, Color alpha}) getOklchShiftAlphaColors(Color background) {
+    final bg = rgbToOklch(background);
+    final bgLum = background.computeLuminance();
+
+    // Opposite perceptual lightness
+    final double lightness = bgLum > 0.5 ? 0.30 : 0.80;
+
+    // Strong but safe chroma
+    const double chroma = 0.18;
+
+    // Opposite hue + separation
+    final double baseHue = (bg.h + 180) % 360;
+
+    final shift = oklchToRgb(OKLCH(lightness, chroma, (baseHue + 30) % 360));
+
+    final alpha = oklchToRgb(
+      OKLCH(lightness, chroma, (baseHue - 30 + 360) % 360),
+    );
+
+    return (shift: shift, alpha: alpha);
   }
 }
 

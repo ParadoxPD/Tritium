@@ -2,6 +2,7 @@ import 'package:app/core/evaluator/eval_types.dart';
 import 'package:app/theme/theme_data.dart';
 import 'package:app/widgets/theme_settings.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../state/calculator_state.dart';
 import '../theme/theme_provider.dart';
@@ -189,27 +190,44 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
               // Indicators Row
               Row(
                 children: [
-                  Selector<CalculatorState, bool>(
-                    selector: (_, s) => s.isShift,
-                    builder: (_, v, __) =>
-                        _animatedIndicator('S', shiftColor, theme, v),
+                  GestureDetector(
+                    onTap: state.toggleShift,
+                    child: Selector<CalculatorState, bool>(
+                      selector: (_, s) => s.isShift,
+                      builder: (_, v, _) => _animatedIndicator(
+                        'S',
+                        shiftColor(theme.background),
+                        theme,
+                        v,
+                      ),
+                    ),
                   ),
-                  Selector<CalculatorState, bool>(
-                    selector: (_, s) => s.isAlpha,
-                    builder: (_, v, __) =>
-                        _animatedIndicator('A', alphaColor, theme, v),
+                  GestureDetector(
+                    onTap: state.toggleAlpha,
+                    child: Selector<CalculatorState, bool>(
+                      selector: (_, s) => s.isAlpha,
+                      builder: (_, v, _) => _animatedIndicator(
+                        'A',
+                        alphaColor(theme.background),
+                        theme,
+                        v,
+                      ),
+                    ),
                   ),
-                  Selector<CalculatorState, bool>(
-                    selector: (_, s) => s.isHyp,
-                    builder: (_, v, __) =>
-                        _animatedIndicator('HYP', theme.primary, theme, v),
+                  GestureDetector(
+                    onTap: state.toggleHyp,
+                    child: Selector<CalculatorState, bool>(
+                      selector: (_, s) => s.isHyp,
+                      builder: (_, v, _) =>
+                          _animatedIndicator('HYP', theme.primary, theme, v),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: state.toggleAngleMode,
                     child: Selector<CalculatorState, AngleMode>(
                       selector: (_, s) => s.angleMode,
-                      builder: (_, mode, __) => _staticIndicator(
+                      builder: (_, mode, _) => _staticIndicator(
                         mode == AngleMode.rad ? 'RAD' : 'DEG',
                         theme.primary,
                         theme,
@@ -245,13 +263,27 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
               // Result Display
               Selector<CalculatorState, String>(
                 selector: (_, s) => s.display,
-                builder: (_, value, __) => Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w600,
-                    color: theme.displayText,
-                    letterSpacing: 0.5,
+                builder: (_, value, _) => GestureDetector(
+                  onLongPress: () {
+                    // Copy the text to the clipboard
+                    Clipboard.setData(ClipboardData(text: value));
+
+                    // Optionally, show a confirmation message (e.g., a SnackBar)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Text copied to clipboard!'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w600,
+                      color: theme.displayText,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
               ),
@@ -275,6 +307,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                 alphaColor,
                 isShift,
                 isAlpha,
+                state,
               ),
             ),
           ),
@@ -405,10 +438,11 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
 
   List<Widget> _buildCalculatorButtons(
     AppThemeData theme,
-    Color shiftColor,
-    Color alphaColor,
+    Function(Color) shiftColor,
+    Function(Color) alphaColor,
     bool isShift,
     bool isAlpha,
+    CalculatorState state,
   ) {
     Widget btn(
       String label, {
@@ -420,45 +454,38 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       bool isControl = false,
       VoidCallback? customOnTap,
     }) {
+      Color baseColor = isNumber
+          ? theme.buttonNumber
+          : isOperator
+          ? theme.buttonOperator
+          : isFunction
+          ? theme.buttonFunction
+          : isControl
+          ? theme.buttonSpecial
+          : theme.surface;
+
       return _CasioButton(
         label: label,
         shiftLabel: shift,
         alphaLabel: alpha,
         isActiveShift: isShift,
         isActiveAlpha: isAlpha,
-        baseColor: isNumber
-            ? theme.buttonNumber
-            : isOperator
-            ? theme.buttonOperator
-            : isFunction
-            ? theme.buttonFunction
-            : isControl
-            ? theme.buttonSpecial
-            : theme.surface,
         textColor: theme.primaryTextColor,
-        shiftColor: shiftColor,
-        alphaColor: alphaColor,
+        baseColor: baseColor,
+        shiftColor: shiftColor(baseColor),
+        alphaColor: alphaColor(baseColor),
         onPressed: customOnTap ?? () => _handlePress(label, shift, alpha),
       );
     }
 
     return [
       // Row 1: Removed CLR, Split Arrows
-      btn(
-        'SHIFT',
-        customOnTap: () => context.read<CalculatorState>().toggleShift(),
-        isControl: true,
-      ),
-      btn(
-        'ALPHA',
-        customOnTap: () => context.read<CalculatorState>().toggleAlpha(),
-        isControl: true,
-      ),
+      btn('SHIFT', customOnTap: () => state.toggleShift(), isControl: true),
+      btn('ALPHA', customOnTap: () => state.toggleAlpha(), isControl: true),
       btn(
         'MODE',
         shift: 'SETUP',
-        customOnTap: () =>
-            _showModeMenu(context, context.read<CalculatorState>()),
+        customOnTap: () => _showModeMenu(context, state),
         isControl: true,
       ),
       btn('←', isControl: true),
@@ -467,37 +494,45 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       // Row 2
       btn('x⁻¹', shift: 'x!', alpha: ':', isFunction: true),
       btn('nCr', shift: 'nPr', isFunction: true),
-      btn('Pol(', shift: 'Rec(', isFunction: true),
-      btn('^', shift: '³√', alpha: '∛', isFunction: true),
+      //btn('Pol(', shift: 'Rec(', isFunction: true),
       btn('log', shift: '10ˣ', isFunction: true),
+      btn('ln', shift: 'eˣ', isFunction: true),
 
       // Row 3
-      btn('ln', shift: 'eˣ', isFunction: true),
       btn('(-)', shift: 'Ans', isFunction: true),
-      btn('°\'"', shift: 'ENG', isFunction: true),
+      btn('HYP', customOnTap: () => state.toggleHyp(), isFunction: true),
       btn(
-        'HYP',
-        customOnTap: () => context.read<CalculatorState>().toggleHyp(),
+        state.isHyp ? 'sinh' : 'sin',
+        shift: state.isHyp ? 'sinh⁻¹' : 'sin⁻¹',
+        alpha: 'A',
         isFunction: true,
       ),
-      btn('sin', shift: 'sin⁻¹', alpha: 'D', isFunction: true),
+      btn(
+        state.isHyp ? 'cosh' : 'cos',
+        shift: state.isHyp ? 'cosh⁻¹' : 'cos⁻¹',
+        alpha: 'B',
+        isFunction: true,
+      ),
+      btn(
+        state.isHyp ? 'tanh' : 'tan',
+        shift: state.isHyp ? 'tanh⁻¹' : 'tan⁻¹',
+        alpha: 'C',
+        isFunction: true,
+      ),
+      btn('RCL', shift: 'STO', isFunction: true),
 
       // Row 4
-      btn('cos', shift: 'cos⁻¹', alpha: 'E', isFunction: true),
-      btn('tan', shift: 'tan⁻¹', alpha: 'F', isFunction: true),
-      btn('RCL', shift: 'STO', isFunction: true),
-      btn(
-        'ENG',
-        shift: '←',
-        isFunction: true,
-      ), // Kept original ENG as per layout, though shift Arrow is now redundant but safe
-      btn('(', shift: ')', alpha: 'A', isOperator: true),
+      btn('^2', shift: '√', alpha: '', isFunction: true),
+      btn('^3', shift: '3√', alpha: '', isFunction: true),
+      btn('^', shift: 'n√', alpha: 'D', isFunction: true),
+      btn('(', shift: '', alpha: 'E', isOperator: true),
+      btn(')', shift: '', alpha: 'F', isOperator: true),
 
       // Row 5
       btn('7', shift: 'CONST', alpha: 'off', isNumber: true),
       btn('8', shift: 'CONV', isNumber: true),
       btn('9', shift: 'ARG', isNumber: true),
-      btn('DEL', shift: 'INS', isControl: true),
+      btn('DEL', isControl: true),
       btn('AC', shift: 'RESET', isControl: true), // Moved RESET here
       // Row 6
       btn('4', shift: '∫dx', alpha: 'X', isNumber: true),
@@ -508,8 +543,8 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
 
       // Row 7
       btn('1', shift: 'STAT', alpha: 'M', isNumber: true),
-      btn('2', shift: 'BASE', isNumber: true),
-      btn('3', shift: 'EQN', isNumber: true),
+      btn('2', shift: 'TABL', alpha: 'CMPL', isNumber: true),
+      btn('3', shift: 'EQN', alpha: 'VECTOR', isNumber: true),
       btn('+', shift: 'M+', isOperator: true),
       btn('-', shift: 'M-', isOperator: true),
 
@@ -558,6 +593,32 @@ class _CasioButton extends StatelessWidget {
     required this.onPressed,
   });
 
+  double _buttonFontSize(String label, bool isCenter) {
+    if (isCenter) {
+      // Heavy math / operators
+      if (RegExp(r'[∫Σ√π]').hasMatch(label)) return 16;
+
+      // Superscripts / scientific notation
+      if (label.contains('ˣ') || label.contains('⁻¹')) return 15;
+
+      // Long textual labels
+      if (label.length >= 4) return 14;
+
+      // Normal digits / ops
+      return 18;
+    } else {
+      // Heavy math / operators
+      if (RegExp(r'[∫Σ√π]').hasMatch(label)) return 18;
+
+      // Superscripts / scientific notation
+      if (label.contains('ˣ') || label.contains('⁻¹')) return 14;
+
+      if (label.length <= 2) return 14;
+
+      return 10;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Color mainLabelColor = textColor;
@@ -592,9 +653,16 @@ class _CasioButton extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: label.length > 3 ? 14 : 18,
+                    fontSize: _buttonFontSize(label, true),
                     fontWeight: FontWeight.w600,
                     color: mainLabelColor,
+                    height: 1.0, // prevents vertical shrink
+                    fontFamilyFallback: const [
+                      'Roboto',
+                      'Noto Sans Math',
+                      'Noto Sans Symbols',
+                      'Segoe UI Symbol',
+                    ],
                   ),
                 ),
               ),
@@ -604,9 +672,17 @@ class _CasioButton extends StatelessWidget {
                   top: 3,
                   child: Text(
                     shiftLabel!,
+
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: _buttonFontSize(shiftLabel!, false),
                       fontWeight: FontWeight.bold,
+                      height: 1.0, // prevents vertical shrink
+                      fontFamilyFallback: const [
+                        'Roboto',
+                        'Noto Sans Math',
+                        'Noto Sans Symbols',
+                        'Segoe UI Symbol',
+                      ],
                       color: isActiveShift
                           ? shiftColor
                           : shiftColor.withOpacity(0.6),
@@ -623,7 +699,14 @@ class _CasioButton extends StatelessWidget {
                   child: Text(
                     alphaLabel!,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: _buttonFontSize(alphaLabel!, false),
+                      height: 1.0, // prevents vertical shrink
+                      fontFamilyFallback: const [
+                        'Roboto',
+                        'Noto Sans Math',
+                        'Noto Sans Symbols',
+                        'Segoe UI Symbol',
+                      ],
                       fontWeight: FontWeight.bold,
                       color: isActiveAlpha
                           ? alphaColor

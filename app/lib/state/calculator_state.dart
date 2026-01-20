@@ -64,7 +64,6 @@ class CalculatorState extends ChangeNotifier {
   // --- Input Handling ---
 
   void input(String value) {
-    print(value);
     // Handle special modes
     if (value == 'STO') {
       _isStoreMode = true;
@@ -420,17 +419,11 @@ class CalculatorState extends ChangeNotifier {
 
     if (isHyp) {
       // Map hyp functions
-      if (primary == 'sin')
-        toInput = 'sinh';
-      else if (primary == 'cos')
-        toInput = 'cosh';
-      else if (primary == 'tan')
-        toInput = 'tanh';
-      else if (shift == 'sin⁻¹')
+      if (shift == 'sinh⁻¹')
         toInput = 'asinh';
-      else if (shift == 'cos⁻¹')
+      else if (shift == 'cosh⁻¹')
         toInput = 'acosh';
-      else if (shift == 'tan⁻¹')
+      else if (shift == 'tanh⁻¹')
         toInput = 'atanh';
     }
 
@@ -462,8 +455,11 @@ class CalculatorState extends ChangeNotifier {
       '×': '*',
       '÷': '/',
       '^': '^',
-      '³√': 'cbrt(',
-      '∛': 'cbrt(',
+      '^2': '^2',
+      '^3': '^3',
+      '√': 'sqrt(',
+      '3√': 'cbrt(',
+      'n√': 'nthrt(',
       'log': 'log(',
       '10ˣ': '10^',
       'ln': 'ln(',

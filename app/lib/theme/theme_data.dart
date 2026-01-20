@@ -275,6 +275,49 @@ abstract class AppThemeData {
   Color get buttonSpecial;
   Color get buttonEquals;
   Color get buttonClear;
+  Color get shiftColor => _getAdaptiveColor(warning, buttonSpecial);
+  Color get alphaColor => _getAdaptiveColor(accent, buttonSpecial);
+
+  // --- The Logic ---
+
+  Color _getAdaptiveColor(Color targetColor, Color backgroundColor) {
+    // 1. Determine if the button is Light or Dark
+    final bgLum = backgroundColor.computeLuminance();
+    final isLightBg =
+        bgLum > 0.5; // > 0.5 means it's a light color (White, Grey, Cream)
+
+    // 2. Convert our target (Shift/Alpha) to HSL for easier tuning
+    final hsl = HSLColor.fromColor(targetColor);
+
+    if (isLightBg) {
+      // === CASE A: LIGHT BUTTONS ===
+      // We need DARK text to be readable.
+
+      // SPECIAL FIX FOR YELLOW:
+      // Yellow (Hue 40-70) looks terrible when darkened (becomes olive).
+      // We shift it slightly towards Orange (Hue 30-35) and make it dark.
+      if (hsl.hue > 40 && hsl.hue < 80) {
+        return hsl
+            .withHue(35) // Shift towards Orange
+            .withSaturation(1.0) // Keep it vivid
+            .withLightness(0.35) // Darken significantly
+            .toColor();
+      }
+
+      // For other colors (like Red Alpha), just darken them.
+      // Lightness 0.35 is usually the "sweet spot" for reading on white.
+      return hsl.withLightness(0.35).withSaturation(0.9).toColor();
+    } else {
+      // === CASE B: DARK BUTTONS ===
+      // We need BRIGHT text (Neon effect).
+
+      // If the color is already bright enough, keep it.
+      // Otherwise, boost lightness to at least 0.6
+      double targetL = hsl.lightness < 0.6 ? 0.7 : hsl.lightness;
+
+      return hsl.withLightness(targetL).withSaturation(0.9).toColor();
+    }
+  }
 
   // Generate Material ThemeData
   ThemeData toThemeData() {

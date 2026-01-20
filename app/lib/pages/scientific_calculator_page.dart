@@ -17,9 +17,22 @@ class ScientificCalculatorPage extends StatefulWidget {
 }
 
 class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
+  // Keep focus node to ensure cursor stays visible/blinking
+  final FocusNode _inputFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _inputFocusNode.dispose();
+    super.dispose();
+  }
+
   void _handlePress(String primary, String? shift, String? alpha) {
     final state = context.read<CalculatorState>();
-    String toInput = primary;
+
+    // Request focus so the cursor is visible when typing
+    if (!_inputFocusNode.hasFocus) {
+      _inputFocusNode.requestFocus();
+    }
 
     if (primary == 'STAT' || shift == 'STAT') {
       _navigateToStats();
@@ -33,7 +46,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       return;
     }
 
-    state.handleButtonPress(primary: toInput, shift: shift, alpha: alpha);
+    state.handleButtonPress(primary: primary, shift: shift, alpha: alpha);
   }
 
   void _navigateToStats() {
@@ -143,8 +156,8 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
     final themeProvider = context.read<ThemeProvider>();
     final theme = themeProvider.currentTheme;
 
-    final shiftColor = theme.warning;
-    final alphaColor = theme.error;
+    final shiftColor = theme.shiftColor;
+    final alphaColor = theme.alphaColor;
     final isShift = state.isShift;
     final isAlpha = state.isAlpha;
 
@@ -191,24 +204,18 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                     builder: (_, v, __) =>
                         _animatedIndicator('HYP', theme.primary, theme, v),
                   ),
-
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: state.toggleAngleMode,
                     child: Selector<CalculatorState, AngleMode>(
                       selector: (_, s) => s.angleMode,
-                      builder: (_, mode, __) => GestureDetector(
-                        onTap: () =>
-                            context.read<CalculatorState>().toggleAngleMode(),
-                        child: _staticIndicator(
-                          mode == AngleMode.rad ? 'RAD' : 'DEG',
-                          theme.primary,
-                          theme,
-                        ),
+                      builder: (_, mode, __) => _staticIndicator(
+                        mode == AngleMode.rad ? 'RAD' : 'DEG',
+                        theme.primary,
+                        theme,
                       ),
                     ),
                   ),
-
                   const Spacer(),
                   IconButton(
                     icon: Icon(Icons.apps, color: theme.muted, size: 22),
@@ -230,11 +237,8 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
               ),
               const SizedBox(height: 12),
 
-              // Expression Display
-              Selector<CalculatorState, String>(
-                selector: (_, s) => s.expression,
-                builder: (_, expr, __) => _fadingExpressionDisplay(theme, expr),
-              ),
+              // --- Editable Input Display ---
+              _buildEditorDisplay(theme, state),
 
               const SizedBox(height: 8),
 
@@ -279,37 +283,60 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
     );
   }
 
-  Widget _fadingExpressionDisplay(AppThemeData theme, String text) {
+  // New Editor Display using TextField
+  Widget _buildEditorDisplay(AppThemeData theme, CalculatorState state) {
     return SizedBox(
-      height: 32,
+      height: 36, // Fixed height for one line
       child: ShaderMask(
+        //TODO: Fix the shader stuff
         shaderCallback: (Rect bounds) {
           return LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
             colors: [
-              theme.displayBackground.withOpacity(0.0),
               theme.displayBackground,
               theme.displayBackground,
-              theme.displayBackground.withOpacity(0.0),
+              theme.displayBackground,
+              theme.displayBackground,
             ],
-            stops: const [0.0, 0.1, 0.9, 1.0],
+            stops: const [0.0, 0.05, 0.95, 1.0], // Tighter stops
           ).createShader(bounds);
         },
         blendMode: BlendMode.dstIn,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          reverse: true,
-          physics: const BouncingScrollPhysics(),
-          child: Text(
-            text.isEmpty ? ' ' : text,
-            style: TextStyle(
-              fontSize: 20,
-              fontFamily: 'monospace',
-              color: theme.muted,
-              letterSpacing: 1.0,
-            ),
+        child: TextField(
+          controller: state.controller,
+          focusNode: _inputFocusNode,
+          // Prevent system keyboard but allow cursor movement
+          readOnly: true,
+          scrollController: state.textScrollController,
+          scrollPhysics: const BouncingScrollPhysics(),
+
+          showCursor: true,
+          cursorColor: theme.primary,
+          cursorWidth: 2,
+          cursorRadius: const Radius.circular(2),
+          textAlign: TextAlign.right,
+          textAlignVertical: TextAlignVertical.center,
+          style: TextStyle(
+            fontSize: 20,
+            fontFamily: 'monospace',
+            color: theme.primaryTextColor,
+            letterSpacing: 1.0,
           ),
+          decoration: const InputDecoration(
+            isDense: false,
+            filled: false,
+
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
+            focusedErrorBorder: InputBorder.none,
+
+            contentPadding: EdgeInsets.fromLTRB(0, 4, 0, 4),
+          ),
+          maxLines: 1,
         ),
       ),
     );
@@ -416,7 +443,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
     }
 
     return [
-      // Row 1
+      // Row 1: Removed CLR, Split Arrows
       btn(
         'SHIFT',
         customOnTap: () => context.read<CalculatorState>().toggleShift(),
@@ -434,13 +461,8 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
             _showModeMenu(context, context.read<CalculatorState>()),
         isControl: true,
       ),
-      btn(
-        'CLR',
-        shift: 'RESET',
-        customOnTap: () => context.read<CalculatorState>().input('AC'),
-        isControl: true,
-      ),
-      btn('←', shift: '→', isControl: true),
+      btn('←', isControl: true),
+      btn('→', isControl: true),
 
       // Row 2
       btn('x⁻¹', shift: 'x!', alpha: ':', isFunction: true),
@@ -464,7 +486,11 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       btn('cos', shift: 'cos⁻¹', alpha: 'E', isFunction: true),
       btn('tan', shift: 'tan⁻¹', alpha: 'F', isFunction: true),
       btn('RCL', shift: 'STO', isFunction: true),
-      btn('ENG', shift: '←', isFunction: true),
+      btn(
+        'ENG',
+        shift: '←',
+        isFunction: true,
+      ), // Kept original ENG as per layout, though shift Arrow is now redundant but safe
       btn('(', shift: ')', alpha: 'A', isOperator: true),
 
       // Row 5
@@ -472,8 +498,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       btn('8', shift: 'CONV', isNumber: true),
       btn('9', shift: 'ARG', isNumber: true),
       btn('DEL', shift: 'INS', isControl: true),
-      btn('AC', isControl: true),
-
+      btn('AC', shift: 'RESET', isControl: true), // Moved RESET here
       // Row 6
       btn('4', shift: '∫dx', alpha: 'X', isNumber: true),
       btn('5', shift: 'd/dx', alpha: 'Y', isNumber: true),
@@ -490,7 +515,12 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
 
       // Row 8
       btn('0', shift: 'Rnd', isNumber: true),
-      btn('.', shift: 'Ran#', alpha: '=', isNumber: true),
+      btn(
+        '.',
+        shift: 'Ran#',
+        alpha: 'RanInt',
+        isNumber: true,
+      ), // Corrected alpha placement
       btn('×10ˣ', shift: 'π', alpha: 'e', isNumber: true),
       btn('Ans', shift: 'DRG', isFunction: true),
       btn('=', shift: '%', isControl: true),
@@ -502,6 +532,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
   }
 }
 
+// _CasioButton class remains unchanged (omitted for brevity, assume it's same as provided)
 class _CasioButton extends StatelessWidget {
   final String label;
   final String? shiftLabel;

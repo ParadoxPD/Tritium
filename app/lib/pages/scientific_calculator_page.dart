@@ -1,4 +1,6 @@
 import 'package:app/core/evaluator/eval_types.dart';
+import 'package:app/pages/table_page.dart';
+import 'package:app/pages/vector_page.dart';
 import 'package:app/theme/theme_data.dart';
 import 'package:app/widgets/theme_settings.dart';
 import 'package:flutter/material.dart';
@@ -48,6 +50,17 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       return;
     }
 
+    if (state.isShift && shift == 'TABL') {
+      _navigateToTable();
+      state.clearShift();
+      return;
+    }
+
+    if (state.isAlpha && alpha == 'VECTOR') {
+      _navigateToVector();
+      state.clearAlpha();
+      return;
+    }
     // Normal button press handling
     state.handleButtonPress(primary: primary, shift: shift, alpha: alpha);
   }
@@ -63,6 +76,20 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const EquationPage()),
+    );
+  }
+
+  void _navigateToVector() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const VectorPage()),
+    );
+  }
+
+  void _navigateToTable() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TablePage()),
     );
   }
 
@@ -122,6 +149,34 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
             ),
             const Divider(),
             ListTile(
+              leading: Icon(Icons.table_view, color: theme.primary),
+              title: Text('Table', style: TextStyle(color: theme.foreground)),
+              subtitle: Text(
+                '1-Variable statistical analysis',
+                style: TextStyle(color: theme.muted),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _navigateToTable();
+              },
+            ),
+            const Divider(),
+
+            ListTile(
+              leading: Icon(Icons.directions, color: theme.primary),
+              title: Text('Vector', style: TextStyle(color: theme.foreground)),
+              subtitle: Text(
+                '1-Variable statistical analysis',
+                style: TextStyle(color: theme.muted),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _navigateToVector();
+              },
+            ),
+            const Divider(),
+
+            ListTile(
               leading: Icon(Icons.settings, color: theme.primary),
               title: Text(
                 'Angle Unit',
@@ -130,7 +185,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
               trailing: SizedBox(
                 child: AnimatedBuilder(
                   animation: state,
-                  builder: (_, __) {
+                  builder: (_, _) {
                     return SegmentedButton<AngleMode>(
                       segments: const [
                         ButtonSegment(value: AngleMode.deg, label: Text('DEG')),
@@ -173,13 +228,13 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
             color: theme.displayBackground,
             border: Border(
               bottom: BorderSide(
-                color: theme.subtle.withOpacity(0.3),
+                color: theme.subtle.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -389,16 +444,16 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       margin: const EdgeInsets.only(right: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: active ? color.withOpacity(0.12) : Colors.transparent,
+        color: active ? color.withValues(alpha: 0.12) : Colors.transparent,
         border: Border.all(
-          color: active ? color : color.withOpacity(0.4),
+          color: active ? color : color.withValues(alpha: 0.4),
           width: active ? 1.5 : 1,
         ),
         borderRadius: BorderRadius.circular(4),
         boxShadow: active
             ? [
                 BoxShadow(
-                  color: color.withOpacity(0.3),
+                  color: color.withValues(alpha: 0.3),
                   blurRadius: 4,
                   spreadRadius: 0.5,
                 ),
@@ -410,7 +465,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
-          color: active ? color : color.withOpacity(0.6),
+          color: active ? color : color.withValues(alpha: 0.6),
           letterSpacing: 0.5,
         ),
       ),
@@ -422,8 +477,8 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       margin: const EdgeInsets.only(right: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.6)),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.6)),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -496,12 +551,11 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       // Row 2
       btn('x⁻¹', shift: 'x!', alpha: ':', isFunction: true),
       btn('nCr', shift: 'nPr', isFunction: true),
-      //btn('Pol(', shift: 'Rec(', isFunction: true),
       btn('log', shift: '10ˣ', isFunction: true),
       btn('ln', shift: 'eˣ', isFunction: true),
 
       // Row 3
-      btn('(-)', shift: 'Ans', isFunction: true),
+      btn('Pol(', shift: 'Rec(', isFunction: true),
       btn('HYP', customOnTap: () => state.toggleHyp(), isFunction: true),
       btn(
         state.isHyp ? 'sinh' : 'sin',
@@ -545,7 +599,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
 
       // Row 7
       btn('1', shift: 'STAT', alpha: 'M', isNumber: true),
-      btn('2', shift: 'TABL', alpha: 'CMPL', isNumber: true),
+      btn('2', shift: 'TABL', alpha: 'i', isNumber: true),
       btn('3', shift: 'EQN', alpha: 'VECTOR', isNumber: true),
       btn('+', shift: 'M+', isOperator: true),
       btn('-', shift: 'M-', isOperator: true),

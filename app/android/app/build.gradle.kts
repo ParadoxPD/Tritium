@@ -1,3 +1,7 @@
+import com.android.build.gradle.internal.api.ApkVariantOutputImpl
+import java.text.SimpleDateFormat
+import java.util.Date
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -38,15 +42,25 @@ android {
         }
     }
 
-    android.applicationVariants.all {
-    outputs.all {
-        val variantName = name
-        if (variantName == "release") {
-            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
-                .outputFileName = "tritium.apk"
+    applicationVariants.all {
+        val variant = this
+        variant.outputs.all {
+            if (this is ApkVariantOutputImpl) {
+                // Get current date and time for a unique build identifier
+                val sdf = SimpleDateFormat("yyyyMMdd_HHmmss")
+                val currentDateAndTime = sdf.format(Date())
+
+                // Construct the desired output file name
+                val appName = "tritium" // Replace with your app name or retrieve from libs.versions
+                val versionName = variant.versionName
+                val versionCode = variant.versionCode
+                val buildType = variant.buildType.name
+
+                // Example format: MyApp-release-1.0.0-100-20250120_181615.apk
+                outputFileName = "${appName}-${buildType}-${versionName}-${versionCode}-${currentDateAndTime}.apk"
+            }
         }
     }
-}
 
 }
 

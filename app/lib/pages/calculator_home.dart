@@ -50,7 +50,10 @@ class _CalculatorHomeState extends State<CalculatorHome> {
         ),
       ],
       child: Scaffold(
-        body: IndexedStack(index: _selectedIndex, children: _pages),
+        body: SafeArea(
+          child: IndexedStack(index: _selectedIndex, children: _pages),
+        ),
+        backgroundColor: theme.surface,
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
             color: theme.surface,
@@ -62,61 +65,59 @@ class _CalculatorHomeState extends State<CalculatorHome> {
               ),
             ],
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: BottomNavigationBar(
-                currentIndex: _selectedIndex,
-                onTap: (i) => setState(() => _selectedIndex = i),
-                backgroundColor: Colors.transparent,
-                selectedItemColor: theme.primary,
-                unselectedItemColor: theme.muted,
-                selectedLabelStyle: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-                unselectedLabelStyle: const TextStyle(fontSize: 12),
-                type: BottomNavigationBarType.fixed,
-                elevation: 0,
-                items: [
-                  _buildNavItem(
-                    icon: Icons.calculate,
-                    label: 'Calculator',
-                    isSelected: _selectedIndex == 0,
-                    theme: theme,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.percent,
-                    label: 'Modulo',
-                    isSelected: _selectedIndex == 1,
-                    theme: theme,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.grid_on,
-                    label: 'Matrix',
-                    isSelected: _selectedIndex == 2,
-                    theme: theme,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.tag,
-                    label: 'Base N',
-                    isSelected: _selectedIndex == 3,
-                    theme: theme,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.swap_horiz,
-                    label: 'Convert',
-                    isSelected: _selectedIndex == 4,
-                    theme: theme,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.functions,
-                    label: 'Functions',
-                    isSelected: _selectedIndex == 5,
-                    theme: theme,
-                  ),
-                ],
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+            child: BottomNavigationBar(
+              currentIndex: _selectedIndex,
+              onTap: (i) => setState(() => _selectedIndex = i),
+              backgroundColor: Colors.transparent,
+              selectedItemColor: theme.primary,
+              unselectedItemColor: theme.muted,
+              selectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
               ),
+              unselectedLabelStyle: const TextStyle(fontSize: 12),
+              type: BottomNavigationBarType.fixed,
+              elevation: 0,
+              items: [
+                _buildNavItem(
+                  icon: Icons.calculate,
+                  label: 'Calculator',
+                  isSelected: _selectedIndex == 0,
+                  theme: theme,
+                ),
+                _buildNavItem(
+                  icon: Icons.percent,
+                  label: 'Modulo',
+                  isSelected: _selectedIndex == 1,
+                  theme: theme,
+                ),
+                _buildNavItem(
+                  icon: Icons.grid_on,
+                  label: 'Matrix',
+                  isSelected: _selectedIndex == 2,
+                  theme: theme,
+                ),
+                _buildNavItem(
+                  icon: Icons.tag,
+                  label: 'Base N',
+                  isSelected: _selectedIndex == 3,
+                  theme: theme,
+                ),
+                _buildNavItem(
+                  icon: Icons.swap_horiz,
+                  label: 'Convert',
+                  isSelected: _selectedIndex == 4,
+                  theme: theme,
+                ),
+                _buildNavItem(
+                  icon: Icons.functions,
+                  label: 'Functions',
+                  isSelected: _selectedIndex == 5,
+                  theme: theme,
+                ),
+              ],
             ),
           ),
         ),

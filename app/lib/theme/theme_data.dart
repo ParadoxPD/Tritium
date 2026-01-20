@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
 
 class OKLCH {
   final double l; // 0..1
@@ -389,26 +388,26 @@ abstract class AppThemeData {
   }
 
   OKLCH rgbToOklch(Color color) {
-    // sRGB → linear
     double lin(double x) => x <= 0.04045
         ? x / 12.92
         : math.pow((x + 0.055) / 1.055, 2.4).toDouble();
 
-    final r = lin(color.red / 255);
-    final g = lin(color.green / 255);
-    final b = lin(color.blue / 255);
+    final r = lin(color.r);
+    final g = lin(color.g);
+    final b = lin(color.b);
 
-    // Linear RGB → OKLab
     final l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
     final m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
     final s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
 
-    final l3 = math.pow(l, 1 / 3).toDouble();
-    final m3 = math.pow(m, 1 / 3).toDouble();
-    final s3 = math.pow(s, 1 / 3).toDouble();
+    final l3 = math.pow(l, 1 / 3);
+    final m3 = math.pow(m, 1 / 3);
+    final s3 = math.pow(s, 1 / 3);
 
     final L = 0.2104542553 * l3 + 0.7936177850 * m3 - 0.0040720468 * s3;
+
     final a = 1.9779984951 * l3 - 2.4285922050 * m3 + 0.4505937099 * s3;
+
     final b2 = 0.0259040371 * l3 + 0.7827717662 * m3 - 0.8086757660 * s3;
 
     final c = math.sqrt(a * a + b2 * b2);
@@ -432,37 +431,30 @@ abstract class AppThemeData {
     final m = cube(m_);
     final s = cube(s_);
 
-    final r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
-    final g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
-    final b2 = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+    double srgb(double x) =>
+        x <= 0.0031308 ? 12.92 * x : 1.055 * math.pow(x, 1 / 2.4) - 0.055;
 
-    double clamp(double x) => x.clamp(0.0, 1.0);
+    final r = srgb(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s);
+    final g = srgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s);
+    final b2 = srgb(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
 
-    return Color.fromARGB(
-      255,
-      (clamp(r) * 255).round(),
-      (clamp(g) * 255).round(),
-      (clamp(b2) * 255).round(),
-    );
+    int ch(double x) => (x.clamp(0.0, 1.0) * 255).round();
+
+    return Color.fromARGB(255, ch(r), ch(g), ch(b2));
   }
 
   ({Color shift, Color alpha}) getOklchShiftAlphaColors(Color background) {
     final bg = rgbToOklch(background);
-    final bgLum = background.computeLuminance();
 
-    // Opposite perceptual lightness
-    final double lightness = bgLum > 0.5 ? 0.30 : 0.80;
+    final double lightness = bg.l < 0.6 ? 0.92 : 0.18;
+    const double chroma = 0.22;
 
-    // Strong but safe chroma
-    const double chroma = 0.18;
-
-    // Opposite hue + separation
     final double baseHue = (bg.h + 180) % 360;
 
-    final shift = oklchToRgb(OKLCH(lightness, chroma, (baseHue + 30) % 360));
+    final shift = oklchToRgb(OKLCH(lightness, chroma, (baseHue + 35) % 360));
 
     final alpha = oklchToRgb(
-      OKLCH(lightness, chroma, (baseHue - 30 + 360) % 360),
+      OKLCH(lightness, chroma, (baseHue - 35 + 360) % 360),
     );
 
     return (shift: shift, alpha: alpha);

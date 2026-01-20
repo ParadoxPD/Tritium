@@ -68,6 +68,11 @@ class ExpressionEvaluator {
           tokens.add(',');
           continue;
         }
+        if (c == '!') {
+          flush();
+          tokens.add('!');
+          continue;
+        }
 
         if ('+-*/^()'.contains(c)) {
           if ((c == '-' || c == '+') &&
@@ -118,7 +123,16 @@ class ExpressionEvaluator {
     final out = <String>[];
     final stack = <String>[];
 
-    final prec = {'u+': 5, 'u-': 5, '^': 4, '*': 3, '/': 3, '+': 2, '-': 2};
+    final prec = {
+      '!': 6,
+      'u+': 5,
+      'u-': 5,
+      '^': 4,
+      '*': 3,
+      '/': 3,
+      '+': 2,
+      '-': 2,
+    };
 
     final rightAssoc = {'^', 'u-', 'u+'};
 
@@ -188,6 +202,20 @@ class ExpressionEvaluator {
         if (stack.isEmpty) {
           throw const EvalError(EvalErrorType.syntax, 'Unary plus error');
         }
+      } else if (tok == '!') {
+        if (stack.isEmpty) {
+          throw const EvalError(EvalErrorType.syntax, 'factorial error');
+        }
+        final v = stack.removeLast();
+        if (v < 0 || v != v.floor()) {
+          throw const EvalError(EvalErrorType.domain, 'factorial domain');
+        }
+        if (v > 20) {
+          throw const EvalError(EvalErrorType.domain, 'factorial too large');
+        }
+        int res = 1;
+        for (int i = 1; i <= v; i++) res *= i;
+        stack.add(res.toDouble());
       } else if (context.functions.containsKey(tok)) {
         final def = context.functions[tok]!;
 
@@ -284,6 +312,149 @@ class ExpressionEvaluator {
             }
             stack.add(res.toDouble());
             break;
+
+          case 'C':
+          case 'P':
+            if (stack.length < 2) {
+              throw const EvalError(EvalErrorType.syntax, 'C/P needs 2 args');
+            }
+            final r = stack.removeLast();
+            final n = stack.removeLast();
+
+            if (n < 0 || r < 0 || n != n.floor() || r != r.floor()) {
+              throw const EvalError(EvalErrorType.domain, 'C/P domain');
+            }
+            if (r > n) {
+              throw const EvalError(EvalErrorType.domain, 'r > n');
+            }
+
+            double fact(int x) {
+              double f = 1;
+              for (int i = 1; i <= x; i++) f *= i;
+              return f;
+            }
+
+            if (tok == 'C') {
+              stack.add(
+                fact(n.toInt()) / (fact(r.toInt()) * fact((n - r).toInt())),
+              );
+            } else {
+              stack.add(fact(n.toInt()) / fact((n - r).toInt()));
+            }
+            break;
+
+          case 'nthrt':
+            if (stack.length < 2) {
+              throw const EvalError(EvalErrorType.syntax, 'nthrt(x,n)');
+            }
+            final n = stack.removeLast();
+            final x = stack.removeLast();
+
+            if (n == 0) {
+              throw const EvalError(EvalErrorType.domain, '0th root');
+            }
+            if (x < 0 && n % 2 == 0) {
+              throw const EvalError(
+                EvalErrorType.domain,
+                'even root of negative',
+              );
+            }
+
+            stack.add(math.pow(x, 1 / n).toDouble());
+            break;
+
+          case 'deriv':
+            if (stack.length < 1) {
+              throw const EvalError(EvalErrorType.syntax, 'deriv missing arg');
+            }
+
+            final at = stack.removeLast();
+            const h = 1e-6;
+
+            double evalAt(double x) {
+              final vars = Map<String, double>.from(context.variables);
+              vars['x'] = x;
+              final r = evaluate(
+                context.functions['__tmp__']!.body,
+                mode,
+                context: EvalContext(
+                  variables: vars,
+                  functions: context.functions,
+                ),
+                guard: guard.next(),
+              );
+              if (r is EvalSuccess) return r.value;
+              throw r as EvalError;
+            }
+
+            stack.add((evalAt(at + h) - evalAt(at - h)) / (2 * h));
+            break;
+          case 'sum':
+            if (stack.length < 3) {
+              throw const EvalError(EvalErrorType.syntax, 'sum(expr,x,a,b)');
+            }
+
+            final to = stack.removeLast();
+            final from = stack.removeLast();
+            final variable = 'x';
+
+            double total = 0;
+            for (int i = from.toInt(); i <= to.toInt(); i++) {
+              final vars = Map<String, double>.from(context.variables);
+              vars[variable] = i.toDouble();
+
+              final r = evaluate(
+                context.functions['__tmp__']!.body,
+                mode,
+                context: EvalContext(
+                  variables: vars,
+                  functions: context.functions,
+                ),
+                guard: guard.next(),
+              );
+
+              if (r is EvalSuccess) {
+                total += r.value;
+              } else {
+                throw r as EvalError;
+              }
+            }
+            stack.add(total);
+            break;
+
+          case 'int':
+            if (stack.length < 3) {
+              throw const EvalError(EvalErrorType.syntax, 'int(expr,x,a,b)');
+            }
+
+            final b = stack.removeLast();
+            final a = stack.removeLast();
+            const n = 100; // must be even
+            final h = (b - a) / n;
+
+            double f(double x) {
+              final vars = Map<String, double>.from(context.variables);
+              vars['x'] = x;
+              final r = evaluate(
+                context.functions['__tmp__']!.body,
+                mode,
+                context: EvalContext(
+                  variables: vars,
+                  functions: context.functions,
+                ),
+                guard: guard.next(),
+              );
+              if (r is EvalSuccess) return r.value;
+              throw r as EvalError;
+            }
+
+            double sum = f(a) + f(b);
+            for (int i = 1; i < n; i++) {
+              sum += (i % 2 == 0 ? 2 : 4) * f(a + i * h);
+            }
+
+            stack.add(sum * h / 3);
+            break;
         }
       } else if (_isIdentifier(tok)) {
         if (!context.variables.containsKey(tok)) {
@@ -349,7 +520,14 @@ class ExpressionEvaluator {
     'abs',
     'mod',
     'fact',
+    'C',
+    'P',
+    'sum',
+    'int',
+    'deriv',
+    'nthrt',
   }.contains(s);
+
   bool _isIdentifier(String s) =>
       RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(s) && !_isFunction(s);
 }

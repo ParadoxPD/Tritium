@@ -138,117 +138,123 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
   }
 
   void _showModeMenu(BuildContext context, CalculatorState state) {
-    final theme = context.watch<ThemeProvider>().currentTheme;
+    final theme = context.read<ThemeProvider>().currentTheme;
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: theme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Mode Settings',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: theme.foreground,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: Icon(Icons.calculate, color: theme.primary),
-              title: Text(
-                'Equation Solver',
-                style: TextStyle(color: theme.foreground),
-              ),
-              subtitle: Text(
-                'Solve polynomial & simultaneous equations',
-                style: TextStyle(color: theme.muted),
-              ),
-              onTap: () {
-                Navigator.pop(ctx);
-                _navigateToEquation();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.bar_chart, color: theme.primary),
-              title: Text(
-                'Statistics',
-                style: TextStyle(color: theme.foreground),
-              ),
-              subtitle: Text(
-                '1-Variable statistical analysis',
-                style: TextStyle(color: theme.muted),
-              ),
-              onTap: () {
-                Navigator.pop(ctx);
-                _navigateToStats();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.table_view, color: theme.primary),
-              title: Text('Table', style: TextStyle(color: theme.foreground)),
-              subtitle: Text(
-                'Single and Dual Function Table Generator',
-                style: TextStyle(color: theme.muted),
-              ),
-              onTap: () {
-                Navigator.pop(ctx);
-                _navigateToTable();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.directions, color: theme.primary),
-              title: Text('Vector', style: TextStyle(color: theme.foreground)),
-              subtitle: Text(
-                '2D/3D Vector Calculator',
-                style: TextStyle(color: theme.muted),
-              ),
-              onTap: () {
-                Navigator.pop(ctx);
-                _navigateToVector();
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: Icon(Icons.settings, color: theme.primary),
-              title: Text(
-                'Angle Unit',
-                style: TextStyle(color: theme.foreground),
-              ),
-              trailing: SizedBox(
-                child: AnimatedBuilder(
-                  animation: state,
-                  builder: (_, _) {
-                    return SegmentedButton<AngleMode>(
-                      segments: const [
-                        ButtonSegment(
-                          value: AngleMode.degrees,
-                          label: Text('DEG'),
-                        ),
-                        ButtonSegment(
-                          value: AngleMode.radians,
-                          label: Text('RAD'),
-                        ),
-                      ],
-                      selected: {state.angleMode},
-                      onSelectionChanged: (s) => state.setAngleMode(s.first),
-                      style: SegmentedButton.styleFrom(
-                        selectedBackgroundColor: theme.primary,
-                        selectedForegroundColor: theme.background,
-                      ),
-                    );
-                  },
+      builder: (ctx) => SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Mode Settings',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: theme.foreground,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Icon(Icons.calculate, color: theme.primary),
+                title: Text(
+                  'Equation Solver',
+                  style: TextStyle(color: theme.foreground),
+                ),
+                subtitle: Text(
+                  'Solve polynomial & simultaneous equations',
+                  style: TextStyle(color: theme.muted),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToEquation();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.bar_chart, color: theme.primary),
+                title: Text(
+                  'Statistics',
+                  style: TextStyle(color: theme.foreground),
+                ),
+                subtitle: Text(
+                  '1-Variable statistical analysis',
+                  style: TextStyle(color: theme.muted),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToStats();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.table_view, color: theme.primary),
+                title: Text('Table', style: TextStyle(color: theme.foreground)),
+                subtitle: Text(
+                  'Single and Dual Function Table Generator',
+                  style: TextStyle(color: theme.muted),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToTable();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.directions, color: theme.primary),
+                title: Text(
+                  'Vector',
+                  style: TextStyle(color: theme.foreground),
+                ),
+                subtitle: Text(
+                  '2D/3D Vector Calculator',
+                  style: TextStyle(color: theme.muted),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToVector();
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: Icon(Icons.settings, color: theme.primary),
+                title: Text(
+                  'Angle Unit',
+                  style: TextStyle(color: theme.foreground),
+                ),
+                trailing: SizedBox(
+                  child: AnimatedBuilder(
+                    animation: state,
+                    builder: (_, _) {
+                      return SegmentedButton<AngleMode>(
+                        segments: const [
+                          ButtonSegment(
+                            value: AngleMode.degrees,
+                            label: Text('DEG'),
+                          ),
+                          ButtonSegment(
+                            value: AngleMode.radians,
+                            label: Text('RAD'),
+                          ),
+                        ],
+                        selected: {state.angleMode},
+                        onSelectionChanged: (s) => state.setAngleMode(s.first),
+                        style: SegmentedButton.styleFrom(
+                          selectedBackgroundColor: theme.primary,
+                          selectedForegroundColor: theme.background,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

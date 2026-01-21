@@ -61,5 +61,5 @@ class Token {
   const Token(this.type, this.lexeme, this.position, {this.literal});
 
   @override
-  String toString() => 'Token($type, "$lexeme", $position)';
+  String toString() => 'Token($type, "$lexeme",  $position)';
 }

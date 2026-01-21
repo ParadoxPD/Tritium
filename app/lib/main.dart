@@ -1,7 +1,5 @@
-import 'package:app/core/evaluator/expression_evaluator.dart';
+import 'package:app/core/engine.dart';
 import 'package:app/repositories/function_repository.dart';
-import 'package:app/repositories/memory_repository.dart';
-import 'package:app/services/calculator_service.dart';
 import 'package:app/services/conversion_service.dart';
 import 'package:app/services/function_service.dart';
 import 'package:app/theme/theme_provider.dart';
@@ -12,40 +10,36 @@ import 'pages/calculator_home.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final evaluator = ExpressionEvaluator();
-  final memoryRepo = MemoryRepository();
+  // Create core engine
+  final engine = EvaluationEngine();
+
+  // Create repositories
   final functionRepo = FunctionRepository();
 
-  final calculatorService = CalculatorService(evaluator, memoryRepo);
-  final functionService = FunctionService(functionRepo);
+  // Create services
+  final functionService = FunctionService(functionRepo, engine);
   final conversionService = ConversionService();
 
-  await calculatorService.restore();
+  // Restore saved data
   await functionService.restore();
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
-      child: CalculatorApp(
-        calculatorService: calculatorService,
-        functionService: functionService,
-        conversionService: conversionService,
-      ),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        Provider<EvaluationEngine>.value(value: engine),
+        Provider<FunctionService>.value(value: functionService),
+        ChangeNotifierProvider<ConversionService>.value(
+          value: conversionService,
+        ),
+      ],
+      child: const CalculatorApp(),
     ),
   );
 }
 
 class CalculatorApp extends StatelessWidget {
-  final CalculatorService calculatorService;
-  final FunctionService functionService;
-  final ConversionService conversionService;
-
-  const CalculatorApp({
-    Key? key,
-    required this.calculatorService,
-    required this.functionService,
-    required this.conversionService,
-  }) : super(key: key);
+  const CalculatorApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -60,11 +54,7 @@ class CalculatorApp extends StatelessWidget {
             theme: provider.theme,
             darkTheme: provider.theme,
             themeMode: provider.currentThemeGroup,
-            home: CalculatorHome(
-              calculatorService: calculatorService,
-              functionService: functionService,
-              conversionService: conversionService,
-            ),
+            home: const CalculatorHome(),
           ),
         );
       },

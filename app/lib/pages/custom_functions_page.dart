@@ -1,8 +1,11 @@
+import 'package:app/core/engine.dart';
+import 'package:app/core/engine_result.dart';
+import 'package:app/core/eval_context.dart';
+import 'package:app/core/eval_types.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/custom_function.dart';
 import '../services/function_service.dart';
-import '../widgets/function_test_dialog.dart';
 import '../widgets/app_page.dart';
 import '../theme/theme_provider.dart';
 
@@ -20,33 +23,84 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
   final List<String> _parameters = [];
 
   void _addParameter() {
-    if (_paramController.text.isNotEmpty) {
-      setState(() {
-        _parameters.add(_paramController.text);
-        _paramController.clear();
-      });
+    final param = _paramController.text.trim();
+    if (param.isEmpty) return;
+
+    // Validate parameter name (alphanumeric + underscore)
+    if (!RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(param)) {
+      _showError(
+        'Invalid parameter name. Use letters, numbers, and underscores.',
+      );
+      return;
     }
+
+    if (_parameters.contains(param)) {
+      _showError('Parameter "$param" already added');
+      return;
+    }
+
+    setState(() {
+      _parameters.add(param);
+      _paramController.clear();
+    });
+  }
+
+  void _removeParameter(String param) {
+    setState(() {
+      _parameters.remove(param);
+    });
   }
 
   void _saveFunction() {
-    if (_nameController.text.isEmpty ||
-        _formulaController.text.isEmpty ||
-        _parameters.isEmpty) {
-      _showError('Please fill all fields and add at least one parameter');
+    final name = _nameController.text.trim();
+    final formula = _formulaController.text.trim();
+
+    // Validation
+    if (name.isEmpty) {
+      _showError('Please enter a function name');
+      return;
+    }
+
+    if (!RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(name)) {
+      _showError(
+        'Invalid function name. Use letters, numbers, and underscores.',
+      );
+      return;
+    }
+
+    if (formula.isEmpty) {
+      _showError('Please enter a formula');
+      return;
+    }
+
+    if (_parameters.isEmpty) {
+      _showError('Please add at least one parameter');
       return;
     }
 
     final functionService = context.read<FunctionService>();
 
+    // Check if function name already exists
+    if (functionService.isDefined(name)) {
+      _showError('Function "$name" already exists');
+      return;
+    }
+
+    // Validate formula by testing with dummy values
+    if (!_validateFormula(formula)) {
+      return; // Error already shown in _validateFormula
+    }
+
     final newFunc = CustomFunction(
-      name: _nameController.text,
+      name: name,
       parameters: List.from(_parameters),
-      formula: _formulaController.text,
+      formula: formula,
     );
 
     final updated = [...functionService.currentFunctions, newFunc];
     functionService.setFunctions(updated);
 
+    // Clear form
     setState(() {
       _nameController.clear();
       _formulaController.clear();
@@ -55,36 +109,72 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Function saved successfully!'),
+        content: Text('Function "$name" saved successfully!'),
         backgroundColor: context.read<ThemeProvider>().currentTheme.success,
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
+  bool _validateFormula(String formula) {
+    final engine = context.read<EvaluationEngine>();
+
+    // Create test context with dummy parameter values
+    final testVars = <String, Value>{};
+    for (var param in _parameters) {
+      testVars[param] = const NumberValue(1.0);
+    }
+
+    final testContext = EvalContext(variables: testVars);
+    final result = engine.evaluate(formula, testContext);
+
+    if (result is EngineError) {
+      _showError('Invalid formula: ${result.message}');
+      return false;
+    }
+
+    return true;
+  }
+
   void _deleteFunction(int index) {
     final theme = context.read<ThemeProvider>().currentTheme;
+    final functionService = context.read<FunctionService>();
+    final functions = functionService.currentFunctions;
+
+    if (index < 0 || index >= functions.length) return;
+
+    final funcName = functions[index].name;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Function'),
-        content: const Text('Are you sure you want to delete this function?'),
+        backgroundColor: theme.surface,
+        title: Text(
+          'Delete Function',
+          style: TextStyle(color: theme.foreground),
+        ),
+        content: Text(
+          'Are you sure you want to delete "$funcName"?',
+          style: TextStyle(color: theme.foreground),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(color: theme.muted)),
           ),
           TextButton(
             onPressed: () {
-              final functionService = context.read<FunctionService>();
-              final updated = List<CustomFunction>.from(
-                functionService.currentFunctions,
-              )..removeAt(index);
-
-              functionService.setFunctions(updated);
+              functionService.deleteFunction(index);
               setState(() {});
               Navigator.pop(ctx);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Function "$funcName" deleted'),
+                  backgroundColor: theme.success,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             },
             style: TextButton.styleFrom(foregroundColor: theme.error),
             child: const Text('Delete'),
@@ -97,7 +187,7 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
   void _testFunction(CustomFunction func) {
     showDialog(
       context: context,
-      builder: (_) => FunctionTestDialog(function: func),
+      builder: (_) => _FunctionTestDialog(function: func),
     );
   }
 
@@ -150,8 +240,10 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
                   style: TextStyle(color: theme.foreground),
                   decoration: InputDecoration(
                     labelText: 'Function Name',
-                    hintText: 'e.g., myFunc',
+                    hintText: 'e.g., myFunc, quadratic',
                     prefixIcon: Icon(Icons.functions, color: theme.primary),
+                    helperText: 'Letters, numbers, and underscores only',
+                    helperStyle: TextStyle(color: theme.muted, fontSize: 11),
                   ),
                 ),
 
@@ -166,7 +258,7 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
                         style: TextStyle(color: theme.foreground),
                         decoration: InputDecoration(
                           labelText: 'Parameter',
-                          hintText: 'e.g., x',
+                          hintText: 'e.g., x, y, z',
                           prefixIcon: Icon(Icons.input, color: theme.primary),
                         ),
                         onSubmitted: (_) => _addParameter(),
@@ -201,9 +293,7 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
                         backgroundColor: theme.primary.withOpacity(0.2),
                         deleteIconColor: theme.primary,
                         side: BorderSide(color: theme.primary),
-                        onDeleted: () {
-                          setState(() => _parameters.remove(p));
-                        },
+                        onDeleted: () => _removeParameter(p),
                       );
                     }).toList(),
                   ),
@@ -223,6 +313,8 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
                     hintText: 'e.g., x^2 + 2*x + 1',
                     prefixIcon: Icon(Icons.code, color: theme.primary),
                     alignLabelWithHint: true,
+                    helperText: 'Use parameters defined above',
+                    helperStyle: TextStyle(color: theme.muted, fontSize: 11),
                   ),
                 ),
 
@@ -394,5 +486,229 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
     _formulaController.dispose();
     _paramController.dispose();
     super.dispose();
+  }
+}
+
+class _FunctionTestDialog extends StatefulWidget {
+  final CustomFunction function;
+
+  const _FunctionTestDialog({required this.function});
+
+  @override
+  State<_FunctionTestDialog> createState() => _FunctionTestDialogState();
+}
+
+class _FunctionTestDialogState extends State<_FunctionTestDialog> {
+  late final List<TextEditingController> _controllers;
+  String? _result;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = List.generate(
+      widget.function.parameters.length,
+      (_) => TextEditingController(),
+    );
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _evaluate() {
+    setState(() {
+      _result = null;
+      _error = null;
+    });
+
+    // Parse input values
+    final values = <Value>[];
+    for (var controller in _controllers) {
+      final text = controller.text.trim();
+      if (text.isEmpty) {
+        setState(() => _error = 'Please fill all parameters');
+        return;
+      }
+
+      final num = double.tryParse(text);
+      if (num == null) {
+        setState(() => _error = 'Invalid number: $text');
+        return;
+      }
+
+      values.add(NumberValue(num));
+    }
+
+    // Evaluate function
+    final functionService = context.read<FunctionService>();
+    try {
+      final result = functionService.evaluateFunction(
+        widget.function.name,
+        values,
+      );
+
+      if (result != null) {
+        setState(() => _result = result.toDisplayString());
+      } else {
+        setState(() => _error = 'Evaluation failed');
+      }
+    } catch (e) {
+      setState(() => _error = e.toString());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>().currentTheme;
+
+    return AlertDialog(
+      backgroundColor: theme.surface,
+      title: Text(
+        'Test ${widget.function.name}',
+        style: TextStyle(color: theme.foreground),
+      ),
+      content: SizedBox(
+        width: 300,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Formula display
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.background,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: theme.subtle),
+              ),
+              child: Text(
+                widget.function.formula,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  color: theme.muted,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Parameter inputs
+            ...List.generate(widget.function.parameters.length, (i) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: _controllers[i],
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                    signed: true,
+                  ),
+                  style: TextStyle(color: theme.foreground),
+                  decoration: InputDecoration(
+                    labelText: widget.function.parameters[i],
+                    labelStyle: TextStyle(color: theme.primary),
+                    filled: true,
+                    fillColor: theme.background,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onSubmitted: (_) => _evaluate(),
+                ),
+              );
+            }),
+
+            // Result or Error display
+            if (_result != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: theme.success),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: theme.success,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Result:',
+                          style: TextStyle(
+                            color: theme.success,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _result!,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                        color: theme.foreground,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: theme.error),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: theme.error, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: TextStyle(color: theme.error, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Close', style: TextStyle(color: theme.muted)),
+        ),
+        ElevatedButton(
+          onPressed: _evaluate,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: theme.primary,
+            foregroundColor: theme.background,
+          ),
+          child: const Text('Evaluate'),
+        ),
+      ],
+    );
   }
 }

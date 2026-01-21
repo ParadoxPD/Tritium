@@ -1,59 +1,19 @@
-import 'package:app/core/evaluator/eval_context.dart';
-import 'package:app/core/evaluator/eval_types.dart';
-import 'package:app/repositories/memory_repository.dart';
-
-import '../core/evaluator/expression_evaluator.dart';
+import 'package:app/core/engine.dart';
+import 'package:app/core/engine_result.dart';
+import 'package:app/core/eval_context.dart';
 
 class CalculatorService {
-  final ExpressionEvaluator _evaluator;
-  final MemoryRepository _memoryRepo;
+  final EvaluationEngine engine;
 
-  double? _ans;
-  double _memory = 0.0;
+  CalculatorService(this.engine);
 
-  double? get ans => _ans;
-  double get memory => _memory;
-
-  CalculatorService(this._evaluator, this._memoryRepo);
-
-  Future<void> restore() async {
-    _memory = await _memoryRepo.loadMemory();
-    _ans = await _memoryRepo.loadANS();
-  }
-
-  EvaluationResult evaluate(
-    String expression,
-    AngleMode mode,
+  EngineResult evaluate(
+    String input,
+    AngleMode angleMode,
     EvalContext context,
   ) {
-    final result = _evaluator.evaluate(expression, mode, context: context);
-
-    if (result is EvalSuccess) {
-      _ans = result.value;
-      _memoryRepo.saveANS(_ans!);
-    }
-
-    return result;
+    // Update context with current angle mode
+    final updatedContext = context.copyWith(angleMode: angleMode);
+    return engine.evaluate(input, updatedContext);
   }
-
-  void memoryClear() {
-    _memory = 0.0;
-    _memoryRepo.saveMemory(_memory);
-  }
-
-  void memoryAdd() {
-    if (_ans != null) {
-      _memory += _ans!;
-      _memoryRepo.saveMemory(_memory);
-    }
-  }
-
-  void memorySubtract() {
-    if (_ans != null) {
-      _memory -= _ans!;
-      _memoryRepo.saveMemory(_memory);
-    }
-  }
-
-  double memoryRecall() => _memory;
 }

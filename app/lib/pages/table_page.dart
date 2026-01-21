@@ -1,5 +1,7 @@
-import 'package:app/core/evaluator/eval_context.dart';
-import 'package:app/core/evaluator/eval_types.dart';
+import 'package:app/core/engine.dart';
+import 'package:app/core/engine_result.dart';
+import 'package:app/core/eval_context.dart';
+import 'package:app/core/eval_types.dart';
 import 'package:app/services/calculator_service.dart';
 import 'package:app/theme/theme_provider.dart';
 import 'package:flutter/material.dart';
@@ -65,21 +67,21 @@ class _TablePageState extends State<TablePage> {
       return;
     }
 
-    final calculator = context.read<CalculatorService>();
+    final engine = context.read<EvaluationEngine>();
 
     try {
       for (double x = start; x <= end; x += step) {
         final row = <String, double>{'x': x};
 
-        // Evaluate f(x)
-        final fResult = calculator.evaluate(
-          fx,
-          AngleMode.rad,
-          EvalContext(variables: {'x': x}),
-        );
+        // Create context with x variable
+        final evalContext = EvalContext(variables: {'x': NumberValue(x)});
 
-        if (fResult is EvalSuccess) {
-          row['f(x)'] = fResult.value;
+        // Evaluate f(x)
+        final fResult = engine.evaluate(fx, evalContext);
+
+        if (fResult is EngineSuccess) {
+          final numValue = fResult.value.toDouble();
+          row['f(x)'] = numValue ?? double.nan;
         } else {
           row['f(x)'] = double.nan;
         }
@@ -87,14 +89,11 @@ class _TablePageState extends State<TablePage> {
         // Evaluate g(x) if enabled
         if (_useTwoFunctions && _gxController.text.isNotEmpty) {
           final gx = _gxController.text.trim();
-          final gResult = calculator.evaluate(
-            gx,
-            AngleMode.rad,
-            EvalContext(variables: {'x': x}),
-          );
+          final gResult = engine.evaluate(gx, evalContext);
 
-          if (gResult is EvalSuccess) {
-            row['g(x)'] = gResult.value;
+          if (gResult is EngineSuccess) {
+            final numValue = gResult.value.toDouble();
+            row['g(x)'] = numValue ?? double.nan;
           } else {
             row['g(x)'] = double.nan;
           }

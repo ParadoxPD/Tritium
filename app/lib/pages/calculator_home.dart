@@ -1,3 +1,4 @@
+import 'package:app/core/engine.dart';
 import 'package:app/services/calculator_service.dart';
 import 'package:app/services/conversion_service.dart';
 import 'package:app/services/function_service.dart';
@@ -13,16 +14,7 @@ import '../state/calculator_state.dart';
 import '../theme/theme_provider.dart';
 
 class CalculatorHome extends StatefulWidget {
-  final CalculatorService calculatorService;
-  final FunctionService functionService;
-  final ConversionService conversionService;
-
-  const CalculatorHome({
-    super.key,
-    required this.calculatorService,
-    required this.functionService,
-    required this.conversionService,
-  });
+  const CalculatorHome({super.key});
 
   @override
   State<CalculatorHome> createState() => _CalculatorHomeState();
@@ -31,22 +23,30 @@ class CalculatorHome extends StatefulWidget {
 class _CalculatorHomeState extends State<CalculatorHome> {
   int _selectedIndex = 0;
 
+  // Don't use 'late final' - just use nullable with lazy initialization
+  CalculatorService? _calculatorService;
+
+  CalculatorService _getCalculatorService(BuildContext context) {
+    // Lazy initialization - only create once
+    if (_calculatorService == null) {
+      final engine = context.read<EvaluationEngine>();
+      _calculatorService = CalculatorService(engine);
+    }
+    return _calculatorService!;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().currentTheme;
+    final calculatorService = _getCalculatorService(context);
 
     return MultiProvider(
       providers: [
-        Provider<FunctionService>.value(value: widget.functionService),
-        Provider<CalculatorService>.value(value: widget.calculatorService),
-
-        ChangeNotifierProvider<ConversionService>.value(
-          value: widget.conversionService,
-        ),
-
+        // FunctionService and EvaluationEngine are already provided from main.dart
+        Provider<CalculatorService>.value(value: calculatorService),
+        // ConversionService is already provided from main.dart
         ChangeNotifierProvider(
-          create: (_) =>
-              CalculatorState(widget.calculatorService, widget.functionService),
+          create: (_) => CalculatorState(context.read<EvaluationEngine>()),
         ),
       ],
       child: Scaffold(

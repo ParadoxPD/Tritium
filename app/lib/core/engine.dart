@@ -6,6 +6,7 @@ import 'package:app/core/engine/parser/tokenizer.dart';
 import 'package:app/core/engine_result.dart';
 import 'package:app/core/eval_context.dart';
 import 'package:app/core/eval_types.dart';
+import 'package:app/services/logging_service.dart';
 
 /// The public API for the calculation engine.
 ///
@@ -13,15 +14,15 @@ import 'package:app/core/eval_types.dart';
 /// 1. The persistent state (variables 'A', 'B', 'Ans', etc.)
 /// 2. Global settings (Angle Mode, Precision)
 /// 3. The execution pipeline (Tokenizer -> Parser -> Binder -> Evaluator)
-class Engine {
+class EvaluationEngine {
   /// Configuration for the engine (RAD/DEG, precision, etc.)
-  final EvalContext context;
 
   // Persistent subsystems
   late final Binder _binder;
   late final Evaluator _evaluator;
+  final logger = LoggerService();
 
-  Engine({EvalContext? context}) : context = context ?? EvalContext() {
+  EvaluationEngine() {
     _binder = Binder();
     _evaluator = Evaluator();
   }
@@ -29,10 +30,12 @@ class Engine {
   /// The main entry point for calculating a result.
   ///
   /// [input] is the raw string from the text field.
-  EngineResult evaluate(String input) {
+  EngineResult evaluate(String input, EvalContext context) {
     if (input.trim().isEmpty) {
       return EngineSuccess(NumberValue(0), context);
     }
+
+    logger.info(input);
 
     try {
       // -----------------------------------------------------------------------
@@ -42,6 +45,7 @@ class Engine {
       final tokenizer = Tokenizer(input);
       final tokens = tokenizer.tokenize();
 
+      logger.info(tokens.toString());
       // -----------------------------------------------------------------------
       // STEP 2: PARSING
       // Organize tokens into a structural tree (AST)
@@ -49,12 +53,14 @@ class Engine {
       final parser = Parser(tokens);
       final ast = parser.parse();
 
+      logger.info(ast.toString());
       // -----------------------------------------------------------------------
       // STEP 3: BINDING (Semantic Analysis)
       // verify variable names, check types, link symbols to the Registry
       // -----------------------------------------------------------------------
       final boundProgram = _binder.bind(ast);
 
+      logger.info(boundProgram.toString());
       // Check for semantic errors (e.g., "Unknown variable 'x'")
       if (_binder.diagnostics.isNotEmpty) {
         return EngineError(
@@ -103,10 +109,5 @@ class Engine {
     _evaluator.clearUserVariables();
     // Note: Binder might need a reset if we support deleting vars,
     // but for a calculator, types usually persist or we just re-bind.
-  }
-
-  /// Switch between Radians and Degrees
-  void setAngleMode(AngleMode mode) {
-    context.angleMode = mode;
   }
 }

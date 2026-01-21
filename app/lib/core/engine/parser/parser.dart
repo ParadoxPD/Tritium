@@ -93,26 +93,49 @@ class Parser {
   Expression _implicitMultiplication() {
     var expr = _power();
 
-    // Handle implicit multiplication: 2x, 3(x+1), (x+1)(x-1)
     while (_canImplicitMultiply()) {
-      final right = _power();
-      expr = BinaryExpression(expr, TokenType.multiply, right, expr.position);
+      if (_check(TokenType.root)) {
+        // Handle n-th root notation: [index]√[radicand]
+        // Instead of multiplying, we use 'expr' as the index.
+        final rootToken = _advance();
+
+        // We parse the radicand with _power precedence to ensure
+        // 3√8^2 parses 8^2 as the radicand.
+        final radicand = _power();
+
+        expr = RootExpression(radicand, expr, rootToken.position);
+      } else {
+        // Normal implicit multiplication: 2x, 5(3+1), (a)(b)
+        final right = _power();
+        expr = BinaryExpression(expr, TokenType.multiply, right, expr.position);
+      }
     }
 
     return expr;
   }
 
   bool _canImplicitMultiply() {
+    if (_isAtEnd()) return false;
+
     final current = _peek().type;
     final previous = _current > 0 ? tokens[_current - 1].type : null;
 
-    // After number or ) or ], before ( or identifier
-    return (previous == TokenType.number ||
-            previous == TokenType.rightParen ||
-            previous == TokenType.rightBracket) &&
-        (current == TokenType.leftParen ||
-            current == TokenType.identifier ||
-            current == TokenType.root);
+    // Tokens that can appear on the LEFT of an implicit operation
+    final isLeftValid =
+        previous == TokenType.number ||
+        previous == TokenType.identifier ||
+        previous == TokenType.imaginaryUnit ||
+        previous == TokenType.rightParen ||
+        previous == TokenType.rightBracket;
+
+    // Tokens that can appear on the RIGHT to trigger an implicit operation
+    final isRightValid =
+        current == TokenType.leftParen ||
+        current == TokenType.leftBracket ||
+        current == TokenType.identifier ||
+        current == TokenType.root;
+
+    return isLeftValid && isRightValid;
   }
 
   Expression _power() {
@@ -160,15 +183,12 @@ class Parser {
     if (_match(TokenType.root)) {
       final rootPos = _previous().position;
 
-      // Check for index before root (e.g., 3√8)
-      Expression? index;
-      if (_current > 1 && tokens[_current - 2].type == TokenType.number) {
-        // Already consumed, need to backtrack
-        // For simplicity, require explicit nthrt() function for custom roots
-      }
+      // When parsing a root directly (not via implicit multiplication),
+      // the index is null (defaults to square root).
+      // We call _unary() for the radicand to support √√16 or √-4.
+      final radicand = _unary();
 
-      final radicand = _call();
-      return RootExpression(radicand, index, rootPos);
+      return RootExpression(radicand, null, rootPos);
     }
 
     return _call();

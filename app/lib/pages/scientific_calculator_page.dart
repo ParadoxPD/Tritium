@@ -1,4 +1,4 @@
-import 'package:app/core/evaluator/eval_types.dart';
+import 'package:app/core/eval_context.dart';
 import 'package:app/pages/table_page.dart';
 import 'package:app/pages/vector_page.dart';
 import 'package:app/theme/theme_data.dart';
@@ -29,6 +29,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
     super.dispose();
   }
 
+  // In _handlePress method
   void _handlePress(String primary, String? shift, String? alpha) {
     final state = context.read<CalculatorState>();
 
@@ -37,7 +38,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       _inputFocusNode.requestFocus();
     }
 
-    // Check if SHIFT is active and shift parameter contains STAT/EQN
+    // Handle special navigation buttons first
     if (state.isShift && shift == 'STAT') {
       _navigateToStats();
       state.clearShift();
@@ -61,8 +62,51 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       state.clearAlpha();
       return;
     }
+
+    // Special handling for DEL and AC buttons
+    if (primary == 'DEL') {
+      state.delete();
+      return;
+    }
+
+    if (primary == 'AC') {
+      state.clear();
+      return;
+    }
+
+    // For arrow keys, handle cursor movement
+    if (primary == '←') {
+      _moveCursorLeft();
+      return;
+    }
+
+    if (primary == '→') {
+      _moveCursorRight();
+      return;
+    }
+
     // Normal button press handling
     state.handleButtonPress(primary: primary, shift: shift, alpha: alpha);
+  }
+
+  void _moveCursorLeft() {
+    final state = context.read<CalculatorState>();
+    final currentPos = state.controller.selection.base.offset;
+    if (currentPos > 0) {
+      state.controller.selection = TextSelection.collapsed(
+        offset: currentPos - 1,
+      );
+    }
+  }
+
+  void _moveCursorRight() {
+    final state = context.read<CalculatorState>();
+    final currentPos = state.controller.selection.base.offset;
+    if (currentPos < state.controller.text.length) {
+      state.controller.selection = TextSelection.collapsed(
+        offset: currentPos + 1,
+      );
+    }
   }
 
   void _navigateToStats() {
@@ -94,7 +138,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
   }
 
   void _showModeMenu(BuildContext context, CalculatorState state) {
-    final theme = context.read<ThemeProvider>().currentTheme;
+    final theme = context.watch<ThemeProvider>().currentTheme;
 
     showModalBottomSheet(
       context: context,
@@ -184,8 +228,14 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                   builder: (_, _) {
                     return SegmentedButton<AngleMode>(
                       segments: const [
-                        ButtonSegment(value: AngleMode.deg, label: Text('DEG')),
-                        ButtonSegment(value: AngleMode.rad, label: Text('RAD')),
+                        ButtonSegment(
+                          value: AngleMode.degrees,
+                          label: Text('DEG'),
+                        ),
+                        ButtonSegment(
+                          value: AngleMode.radians,
+                          label: Text('RAD'),
+                        ),
                       ],
                       selected: {state.angleMode},
                       onSelectionChanged: (s) => state.setAngleMode(s.first),
@@ -207,7 +257,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<CalculatorState>();
-    final themeProvider = context.read<ThemeProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
     final theme = themeProvider.currentTheme;
 
     final shiftColor = theme.shiftColor;
@@ -281,7 +331,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                     child: Selector<CalculatorState, AngleMode>(
                       selector: (_, s) => s.angleMode,
                       builder: (_, mode, _) => _staticIndicator(
-                        mode == AngleMode.rad ? 'RAD' : 'DEG',
+                        mode == AngleMode.radians ? 'RAD' : 'DEG',
                         theme.primary,
                         theme,
                       ),
@@ -610,7 +660,12 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       ), // Corrected alpha placement
       btn('×10ˣ', shift: 'π', alpha: 'e', isNumber: true),
       btn('Ans', shift: 'DRG', isFunction: true),
-      btn('=', shift: '≈', isControl: true),
+      btn(
+        '=',
+        shift: '≈',
+        isControl: true,
+        customOnTap: () => state.evaluate(),
+      ),
     ];
   }
 

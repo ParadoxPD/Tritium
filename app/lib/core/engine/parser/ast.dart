@@ -14,16 +14,25 @@ sealed class Expression extends ASTNode {
 class NumberLiteral extends Expression {
   final double value;
   const NumberLiteral(this.value, int position) : super(position);
+
+  @override
+  String toString() => 'Number Literal ($value, $position)';
 }
 
 class StringLiteral extends Expression {
   final String value;
   const StringLiteral(this.value, int position) : super(position);
+
+  @override
+  String toString() => 'String Literal($value, $position)';
 }
 
 class IdentifierExpression extends Expression {
   final String name;
   const IdentifierExpression(this.name, int position) : super(position);
+
+  @override
+  String toString() => 'Identifier("$name", $position)';
 }
 
 class BinaryExpression extends Expression {
@@ -33,6 +42,10 @@ class BinaryExpression extends Expression {
 
   const BinaryExpression(this.left, this.operator, this.right, int position)
     : super(position);
+
+  @override
+  String toString() =>
+      'Binary Expression("${left.toString()}" "$operator" "${right.toString()}", $position)';
 }
 
 class UnaryExpression extends Expression {
@@ -41,6 +54,10 @@ class UnaryExpression extends Expression {
 
   const UnaryExpression(this.operator, this.operand, int position)
     : super(position);
+
+  @override
+  String toString() =>
+      'Unary Expression(""$operator" "${operand.toString()}", $position)';
 }
 
 class CallExpression extends Expression {
@@ -49,15 +66,20 @@ class CallExpression extends Expression {
 
   const CallExpression(this.functionName, this.arguments, int position)
     : super(position);
+
+  @override
+  String toString() => 'Call Expression("$functionName, $position)';
 }
 
 class RootExpression extends Expression {
   final Expression? index;
   final Expression radicand;
 
-  // FIX: position is now passed explicitly to super
   const RootExpression(this.radicand, this.index, int position)
     : super(position);
+  @override
+  String toString() =>
+      'Root Expression(${index.toString()}, ${radicand.toString()}, $position)';
 }
 
 class MatrixLiteral extends Expression {
@@ -100,8 +122,11 @@ sealed class Statement extends ASTNode {
 
 class ExpressionStatement extends Statement {
   final Expression expression;
-  // FIX: explicit position parameter
   const ExpressionStatement(this.expression, int position) : super(position);
+
+  @override
+  String toString() =>
+      'Expression Statement(${expression.toString()} , $position)';
 }
 
 class LetStatement extends Statement {

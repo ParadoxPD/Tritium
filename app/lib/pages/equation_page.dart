@@ -109,7 +109,7 @@ class _EquationPageState extends State<EquationPage>
               border: Border.all(color: theme.subtle),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
                   'Degree',
@@ -135,6 +135,7 @@ class _EquationPageState extends State<EquationPage>
                   style: SegmentedButton.styleFrom(
                     selectedBackgroundColor: theme.primary,
                     selectedForegroundColor: theme.background,
+                    fixedSize: const Size(double.infinity, 40),
                   ),
                 ),
               ],
@@ -253,24 +254,26 @@ class _EquationPageState extends State<EquationPage>
         ),
       );
 
-      if (i < _polyDegree) {
-        String power = i == _polyDegree - 1
-            ? 'x'
-            : 'x${String.fromCharCode(0x2070 + (_polyDegree - i))}';
-        terms.add(
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              power,
-              style: TextStyle(
-                color: theme.primary,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+      String power = switch (_polyDegree - i) {
+        0 => '',
+        1 => 'x',
+        2 => 'x²',
+        3 => 'x³',
+        _ => '',
+      };
+      terms.add(
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Text(
+            power,
+            style: TextStyle(
+              color: theme.primary,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        );
-      }
+        ),
+      );
     }
 
     terms.add(
@@ -361,7 +364,7 @@ class _EquationPageState extends State<EquationPage>
               border: Border.all(color: theme.subtle),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
                   'Number of Unknowns',
@@ -387,6 +390,7 @@ class _EquationPageState extends State<EquationPage>
                   style: SegmentedButton.styleFrom(
                     selectedBackgroundColor: theme.primary,
                     selectedForegroundColor: theme.background,
+                    fixedSize: const Size(double.infinity, 40),
                   ),
                 ),
               ],

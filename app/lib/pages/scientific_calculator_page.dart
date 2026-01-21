@@ -147,12 +147,11 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                 _navigateToStats();
               },
             ),
-            const Divider(),
             ListTile(
               leading: Icon(Icons.table_view, color: theme.primary),
               title: Text('Table', style: TextStyle(color: theme.foreground)),
               subtitle: Text(
-                '1-Variable statistical analysis',
+                'Single and Dual Function Table Generator',
                 style: TextStyle(color: theme.muted),
               ),
               onTap: () {
@@ -160,13 +159,11 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                 _navigateToTable();
               },
             ),
-            const Divider(),
-
             ListTile(
               leading: Icon(Icons.directions, color: theme.primary),
               title: Text('Vector', style: TextStyle(color: theme.foreground)),
               subtitle: Text(
-                '1-Variable statistical analysis',
+                '2D/3D Vector Calculator',
                 style: TextStyle(color: theme.muted),
               ),
               onTap: () {
@@ -175,7 +172,6 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
               },
             ),
             const Divider(),
-
             ListTile(
               leading: Icon(Icons.settings, color: theme.primary),
               title: Text(

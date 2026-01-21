@@ -121,20 +121,24 @@
 
 ### 🎨 Themes & Customization
 
-**20+ Beautiful Themes**
+**30+ Beautiful Themes**
 
-_Dark Themes (11)_
+_Dark Themes (17)_
 
 - Default Dark, Midnight, Amoled Black
 - Dark Ocean, Forest Night, Purple Dreams
 - Cyberpunk, Sunset, Dracula
-- Monokai, Nord
+- Monokai, Nord, OneDarkPro
+- GruvBox, Tokyo Night, Night Owl
+- Catpuccin, Github Dark
 
-_Light Themes (10)_
+_Light Themes (15)_
 
 - Default Light, Paper White, Cream
 - Pastel Blue, Mint Fresh, Lavender Dreams
 - Warm Peach, Sky Blue, Rose Garden, Minimalist
+- Github Light, One Light, Solarized Light,
+- Catpuccin Latte, Everforest Light
 
 **Customization**
 
@@ -148,41 +152,6 @@ _Light Themes (10)_
 ## 📱 Screenshots
 
 ### Scientific Calculator
-
-```
-┌─────────────────────────────────┐
-│  S  A  HYP  RAD    ⚙️  🎨      │
-│                                 │
-│  2sin(π/4)+3cos(60°)           │
-│                                 │
-│            4.8660254037        │
-└─────────────────────────────────┘
-│ SHIFT │ ALPHA │ MODE │  ←  │  →│
-│  x⁻¹  │  nCr  │ Pol( │ log │ ln│
-│  (-)  │  HYP  │ sin  │ cos │tan│
-│  RCL  │  x²   │  x³  │  ^  │  (│
-│   7   │   8   │   9  │ DEL │ AC│
-│   4   │   5   │   6  │  ×  │  ÷│
-│   1   │   2   │   3  │  +  │  -│
-│   0   │   .   │ ×10ˣ │ Ans │  =│
-└─────────────────────────────────┘
-```
-
-### Statistics Mode
-
-```
-┌─────────────────────────────────┐
-│       1-Variable Statistics     │
-├──────────────┬──────────────────┤
-│  Data Entry  │     Results      │
-├──────────────┼──────────────────┤
-│  1: 10       │  n:     5        │
-│  2: 20       │  Σx:    75       │
-│  3: 15       │  x̄:     15       │
-│  4: 15       │  σx:    5.4772   │
-│  5: 15       │  Med:   15       │
-└──────────────┴──────────────────┘
-```
 
 _(More screenshots coming soon)_
 

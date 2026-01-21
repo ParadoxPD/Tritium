@@ -1,0 +1,1822 @@
+// ============================================================================
+// FILE: core/engine/binder/binder.dart
+// Binds AST to typed, resolved Bound AST
+// ============================================================================
+
+import 'package:app/core/engine/binder/bound_ast.dart';
+import 'package:app/core/engine/binder/symbol_table.dart';
+import 'package:app/core/engine/parser/ast.dart';
+import 'package:app/core/engine/parser/token.dart';
+import 'package:app/core/engine_result.dart';
+
+class Binder {
+  final SymbolTable _symbols;
+
+  Binder([SymbolTable? symbols]) : _symbols = symbols ?? _createGlobalScope();
+
+  static SymbolTable _createGlobalScope() {
+    final scope = SymbolTable();
+
+    // Built-in constants
+    scope.define('pi', ValueType.number, isConstant: true);
+    scope.define('e', ValueType.number, isConstant: true);
+    scope.define('i', ValueType.complex, isConstant: true);
+
+    // Built-in functions (simplified - actual impl would be more detailed)
+    for (final fn in ['sin', 'cos', 'tan', 'sqrt', 'log', 'ln']) {
+      scope.define(fn, ValueType.function, isConstant: true);
+    }
+
+    return scope;
+  }
+
+  BoundNode bind(ASTNode node) {
+    if (node is Expression) {
+      return _bindExpression(node);
+    } else if (node is Statement) {
+      return _bindStatement(node);
+    }
+    throw EngineError(
+      ErrorType.unknown,
+      'Unknown node type: ${node.runtimeType}',
+      position: node.position,
+    );
+  }
+
+  BoundExpression _bindExpression(Expression expr) {
+    switch (expr) {
+      case NumberLiteral():
+        return BoundNumberLiteral(expr.value, expr.position);
+
+      case StringLiteral():
+        return BoundStringLiteral(expr.value, expr.position);
+
+      case IdentifierExpression():
+        final symbol = _symbols.lookup(expr.name);
+        if (symbol == null) {
+          throw EngineError(
+            ErrorType.undefinedVariable,
+            'Undefined variable: ${expr.name}',
+            position: expr.position,
+            hint: 'Make sure the variable is defined before use',
+          );
+        }
+        return BoundVariable(expr.name, symbol.type, expr.position);
+
+      case BinaryExpression():
+        final left = _bindExpression(expr.left);
+        final right = _bindExpression(expr.right);
+        final op = _bindBinaryOperator(expr.operator);
+        final resultType = _inferBinaryType(left.type, op, right.type);
+        return BoundBinaryOperation(left, op, right, resultType, expr.position);
+
+      case UnaryExpression():
+        final operand = _bindExpression(expr.operand);
+        final op = _bindUnaryOperator(expr.operator);
+        final resultType = _inferUnaryType(op, operand.type);
+        return BoundUnaryOperation(op, operand, resultType, expr.position);
+
+      case CallExpression():
+        final args = expr.arguments.map(_bindExpression).toList();
+        // Simple function lookup - real impl would check signature
+        final symbol = _symbols.lookup(expr.functionName);
+        if (symbol == null) {
+          throw EngineError(
+            ErrorType.undefinedFunction,
+            'Undefined function: ${expr.functionName}',
+            position: expr.position,
+          );
+        }
+        return BoundFunctionCall(
+          expr.functionName,
+          args,
+          ValueType.any, // Would need proper return type inference
+          expr.position,
+        );
+
+      case RootExpression():
+        final radicand = _bindExpression(expr.radicand);
+        final index = expr.index != null ? _bindExpression(expr.index!) : null;
+        return BoundRoot(radicand, index, expr.position);
+
+      case MatrixLiteral():
+        final rows = expr.rows
+            .map((row) => row.map(_bindExpression).toList())
+            .toList();
+        return BoundMatrixLiteral(rows, expr.position);
+
+      case VectorLiteral():
+        final components = expr.components.map(_bindExpression).toList();
+        return BoundVectorLiteral(components, expr.position);
+
+      case RecordLiteral():
+        final fields = expr.fields.map(
+          (key, value) => MapEntry(key, _bindExpression(value)),
+        );
+        return BoundRecordLiteral(fields, expr.position);
+
+      case ListLiteral():
+        final elements = expr.elements.map(_bindExpression).toList();
+        return BoundListLiteral(elements, expr.position);
+
+      case IfExpression():
+        final condition = _bindExpression(expr.condition);
+        final thenBranch = _bindExpression(expr.thenBranch);
+        final elseBranch = _bindExpression(expr.elseBranch);
+        // Both branches should have compatible types
+        final resultType = _unifyTypes(thenBranch.type, elseBranch.type);
+        return BoundIfExpression(
+          condition,
+          thenBranch,
+          elseBranch,
+          resultType,
+          expr.position,
+        );
+
+      default:
+        throw EngineError(
+          ErrorType.unknown,
+          'Unknown expression type: ${expr.runtimeType}',
+          position: expr.position,
+        );
+    }
+  }
+
+  BoundStatement _bindStatement(Statement stmt) {
+    switch (stmt) {
+      case ExpressionStatement():
+        BoundExpression expression = _bindExpression(stmt.expression);
+        return BoundExpressionStatement(
+          expression,
+          expression.type,
+          expression.position,
+        );
+
+      case LetStatement():
+        final value = _bindExpression(stmt.value);
+        _symbols.define(stmt.name, value.type);
+        return BoundLetStatement(stmt.name, value, value.type, stmt.position);
+
+      default:
+        throw EngineError(
+          ErrorType.unknown,
+          'Unknown statement type: ${stmt.runtimeType}',
+          position: stmt.position,
+        );
+    }
+  }
+
+  BoundBinaryOperator _bindBinaryOperator(TokenType type) {
+    return switch (type) {
+      TokenType.plus => BoundBinaryOperator.add,
+      TokenType.minus => BoundBinaryOperator.subtract,
+      TokenType.multiply => BoundBinaryOperator.multiply,
+      TokenType.divide => BoundBinaryOperator.divide,
+      TokenType.power => BoundBinaryOperator.power,
+      TokenType.equals => BoundBinaryOperator.equals,
+      TokenType.notEquals => BoundBinaryOperator.notEquals,
+      TokenType.lessThan => BoundBinaryOperator.lessThan,
+      TokenType.greaterThan => BoundBinaryOperator.greaterThan,
+      TokenType.lessOrEqual => BoundBinaryOperator.lessOrEqual,
+      TokenType.greaterOrEqual => BoundBinaryOperator.greaterOrEqual,
+      _ => throw ArgumentError('Invalid binary operator: $type'),
+    };
+  }
+
+  BoundUnaryOperator _bindUnaryOperator(TokenType type) {
+    return switch (type) {
+      TokenType.minus => BoundUnaryOperator.negate,
+      TokenType.factorial => BoundUnaryOperator.factorial,
+      _ => throw ArgumentError('Invalid unary operator: $type'),
+    };
+  }
+
+  ValueType _inferBinaryType(
+    ValueType left,
+    BoundBinaryOperator op,
+    ValueType right,
+  ) {
+    // Simplified type inference - real impl would be more sophisticated
+    if (op == BoundBinaryOperator.add || op == BoundBinaryOperator.subtract) {
+      if (left == ValueType.matrix && right == ValueType.matrix)
+        return ValueType.matrix;
+      if (left == ValueType.vector && right == ValueType.vector)
+        return ValueType.vector;
+      if (left == ValueType.complex || right == ValueType.complex)
+        return ValueType.complex;
+      return ValueType.number;
+    }
+    return ValueType.number;
+  }
+
+  ValueType _inferUnaryType(BoundUnaryOperator op, ValueType operandType) {
+    return operandType; // Simplified
+  }
+
+  ValueType _unifyTypes(ValueType a, ValueType b) {
+    if (a == b) return a;
+    if (a == ValueType.any || b == ValueType.any) return ValueType.any;
+    // More sophisticated unification would go here
+    return ValueType.any;
+  }
+}
+// ============================================================================
+// FILE: core/engine/binder/bound_ast.dart
+// Bound AST nodes (after type checking and symbol resolution)
+// ============================================================================
+
+import 'package:app/core/engine/binder/symbol_table.dart';
+
+/// Bound nodes have resolved types and symbols
+sealed class BoundNode {
+  final ValueType type;
+  final int position;
+
+  const BoundNode(this.type, this.position);
+}
+
+sealed class BoundExpression extends BoundNode {
+  const BoundExpression(super.type, super.position);
+}
+
+class BoundNumberLiteral extends BoundExpression {
+  final double value;
+
+  const BoundNumberLiteral(this.value, int position)
+    : super(ValueType.number, position);
+}
+
+class BoundStringLiteral extends BoundExpression {
+  final String value;
+
+  const BoundStringLiteral(this.value, int position)
+    : super(ValueType.string, position);
+}
+
+class BoundVariable extends BoundExpression {
+  final String name;
+
+  const BoundVariable(this.name, ValueType type, int position)
+    : super(type, position);
+}
+
+class BoundBinaryOperation extends BoundExpression {
+  final BoundExpression left;
+  final BoundBinaryOperator operator;
+  final BoundExpression right;
+
+  const BoundBinaryOperation(
+    this.left,
+    this.operator,
+    this.right,
+    ValueType resultType,
+    int position,
+  ) : super(resultType, position);
+}
+
+enum BoundBinaryOperator {
+  add,
+  subtract,
+  multiply,
+  divide,
+  power,
+  modulo,
+  equals,
+  notEquals,
+  lessThan,
+  greaterThan,
+  lessOrEqual,
+  greaterOrEqual,
+}
+
+class BoundUnaryOperation extends BoundExpression {
+  final BoundUnaryOperator operator;
+  final BoundExpression operand;
+
+  const BoundUnaryOperation(
+    this.operator,
+    this.operand,
+    ValueType resultType,
+    int position,
+  ) : super(resultType, position);
+}
+
+enum BoundUnaryOperator { negate, factorial, absoluteValue, not }
+
+class BoundFunctionCall extends BoundExpression {
+  final String functionName;
+  final List<BoundExpression> arguments;
+
+  const BoundFunctionCall(
+    this.functionName,
+    this.arguments,
+    ValueType resultType,
+    int position,
+  ) : super(resultType, position);
+}
+
+class BoundRoot extends BoundExpression {
+  final BoundExpression? index;
+  final BoundExpression radicand;
+
+  const BoundRoot(this.radicand, this.index, int position)
+    : super(ValueType.any, position);
+}
+
+class BoundMatrixLiteral extends BoundExpression {
+  final List<List<BoundExpression>> rows;
+
+  const BoundMatrixLiteral(this.rows, int position)
+    : super(ValueType.matrix, position);
+}
+
+class BoundVectorLiteral extends BoundExpression {
+  final List<BoundExpression> components;
+
+  const BoundVectorLiteral(this.components, int position)
+    : super(ValueType.vector, position);
+}
+
+class BoundRecordLiteral extends BoundExpression {
+  final Map<String, BoundExpression> fields;
+
+  const BoundRecordLiteral(this.fields, int position)
+    : super(ValueType.record, position);
+}
+
+class BoundListLiteral extends BoundExpression {
+  final List<BoundExpression> elements;
+
+  const BoundListLiteral(this.elements, int position)
+    : super(ValueType.list, position);
+}
+
+class BoundIfExpression extends BoundExpression {
+  final BoundExpression condition;
+  final BoundExpression thenBranch;
+  final BoundExpression elseBranch;
+
+  const BoundIfExpression(
+    this.condition,
+    this.thenBranch,
+    this.elseBranch,
+    ValueType resultType,
+    int position,
+  ) : super(resultType, position);
+}
+
+sealed class BoundStatement extends BoundNode {
+  const BoundStatement(super.type, super.position);
+}
+
+class BoundExpressionStatement extends BoundStatement {
+  final BoundExpression expression;
+
+  const BoundExpressionStatement(this.expression, ValueType type, int position)
+    : super(type, position);
+}
+
+class BoundLetStatement extends BoundStatement {
+  final String name;
+  final BoundExpression value;
+
+  const BoundLetStatement(this.name, this.value, ValueType type, int position)
+    : super(type, position);
+}
+// ============================================================================
+// FILE: core/engine/binder/symbol_table.dart
+// Symbol resolution and type checking
+// ============================================================================
+
+class Symbol {
+  final String name;
+  final ValueType type;
+  final bool isConstant;
+
+  const Symbol(this.name, this.type, {this.isConstant = false});
+}
+
+enum ValueType {
+  number,
+  complex,
+  matrix,
+  vector,
+  fraction,
+  boolean,
+  string,
+  record,
+  list,
+  function,
+  any,
+  unknown,
+}
+
+class SymbolTable {
+  final SymbolTable? parent;
+  final Map<String, Symbol> _symbols = {};
+
+  SymbolTable([this.parent]);
+
+  void define(String name, ValueType type, {bool isConstant = false}) {
+    _symbols[name] = Symbol(name, type, isConstant: isConstant);
+  }
+
+  Symbol? lookup(String name) {
+    return _symbols[name] ?? parent?.lookup(name);
+  }
+
+  bool isDefined(String name) => lookup(name) != null;
+
+  SymbolTable createChild() => SymbolTable(this);
+}
+// ============================================================================
+// FILE: core/engine/evaluator/evaluator.dart
+// Evaluates Bound AST to produce Values
+// ============================================================================
+
+import 'dart:math' as math;
+
+import 'package:app/core/engine/binder/binder.dart';
+import 'package:app/core/engine/binder/bound_ast.dart';
+import 'package:app/core/engine/evaluator/runtime_errors.dart';
+import 'package:app/core/eval_types.dart';
+
+class Evaluator {
+  final Map<String, Value> _variables = {};
+  final Map<String, NativeFunction> _builtins;
+
+  Evaluator() : _builtins = _initBuiltins();
+
+  static Map<String, NativeFunction> _initBuiltins() {
+    return {
+      // Math functions
+      'sin': NativeFunction(1, (args) {
+        final x = (args[0] as NumberValue).value;
+        return NumberValue(math.sin(x));
+      }),
+      'cos': NativeFunction(1, (args) {
+        final x = (args[0] as NumberValue).value;
+        return NumberValue(math.cos(x));
+      }),
+      'tan': NativeFunction(1, (args) {
+        final x = (args[0] as NumberValue).value;
+        return NumberValue(math.tan(x));
+      }),
+      'sqrt': NativeFunction(1, (args) {
+        final x = (args[0] as NumberValue).value;
+        if (x < 0) {
+          return ComplexValue(0, math.sqrt(-x));
+        }
+        return NumberValue(math.sqrt(x));
+      }),
+      'log': NativeFunction(1, (args) {
+        final x = (args[0] as NumberValue).value;
+        return NumberValue(math.log(x) / math.ln10);
+      }),
+      'ln': NativeFunction(1, (args) {
+        final x = (args[0] as NumberValue).value;
+        return NumberValue(math.log(x));
+      }),
+
+      // Constants
+      'pi': NativeFunction(0, (_) => NumberValue(math.pi)),
+      'e': NativeFunction(0, (_) => NumberValue(math.e)),
+      'i': NativeFunction(0, (_) => const ComplexValue(0, 1)),
+    };
+  }
+
+  Value evaluate(BoundNode node) {
+    if (node is BoundExpression) {
+      return _evaluateExpression(node);
+    } else if (node is BoundStatement) {
+      return _evaluateStatement(node);
+    }
+    throw RuntimeError('Unknown bound node type: ${node.runtimeType}');
+  }
+
+  Value _evaluateExpression(BoundExpression expr) {
+    switch (expr) {
+      case BoundNumberLiteral():
+        return NumberValue(expr.value);
+
+      case BoundStringLiteral():
+        return StringValue(expr.value);
+
+      case BoundVariable():
+        final value = _variables[expr.name];
+        if (value == null) {
+          throw RuntimeError('Undefined variable: ${expr.name}');
+        }
+        return value;
+
+      case BoundBinaryOperation():
+        return _evaluateBinaryOp(expr);
+
+      case BoundUnaryOperation():
+        return _evaluateUnaryOp(expr);
+
+      case BoundFunctionCall():
+        return _evaluateFunctionCall(expr);
+
+      case BoundRoot():
+        return _evaluateRoot(expr);
+
+      case BoundMatrixLiteral():
+        return _evaluateMatrix(expr);
+
+      case BoundVectorLiteral():
+        return _evaluateVector(expr);
+
+      case BoundRecordLiteral():
+        return _evaluateRecord(expr);
+
+      case BoundListLiteral():
+        final elements = expr.elements.map(_evaluateExpression).toList();
+        return ListValue(elements);
+
+      case BoundIfExpression():
+        final condition = _evaluateExpression(expr.condition);
+        if (_isTruthy(condition)) {
+          return _evaluateExpression(expr.thenBranch);
+        } else {
+          return _evaluateExpression(expr.elseBranch);
+        }
+
+      default:
+        throw RuntimeError('Unknown expression type: ${expr.runtimeType}');
+    }
+  }
+
+  Value _evaluateStatement(BoundStatement stmt) {
+    switch (stmt) {
+      case BoundExpressionStatement():
+        return _evaluateExpression(stmt.expression);
+
+      case BoundLetStatement():
+        final value = _evaluateExpression(stmt.value);
+        _variables[stmt.name] = value;
+        return value;
+
+      default:
+        throw RuntimeError('Unknown statement type: ${stmt.runtimeType}');
+    }
+  }
+
+  Value _evaluateBinaryOp(BoundBinaryOperation op) {
+    final left = _evaluateExpression(op.left);
+    final right = _evaluateExpression(op.right);
+
+    return switch (op.operator) {
+      BoundBinaryOperator.add => _add(left, right),
+      BoundBinaryOperator.subtract => _subtract(left, right),
+      BoundBinaryOperator.multiply => _multiply(left, right),
+      BoundBinaryOperator.divide => _divide(left, right),
+      BoundBinaryOperator.power => _power(left, right),
+      BoundBinaryOperator.modulo => _modulo(left, right),
+      BoundBinaryOperator.equals => BooleanValue(_equals(left, right)),
+      BoundBinaryOperator.notEquals => BooleanValue(!_equals(left, right)),
+      BoundBinaryOperator.lessThan => _compare(left, right, (a, b) => a < b),
+      BoundBinaryOperator.greaterThan => _compare(left, right, (a, b) => a > b),
+      BoundBinaryOperator.lessOrEqual => _compare(
+        left,
+        right,
+        (a, b) => a <= b,
+      ),
+      BoundBinaryOperator.greaterOrEqual => _compare(
+        left,
+        right,
+        (a, b) => a >= b,
+      ),
+    };
+  }
+
+  Value _add(Value a, Value b) {
+    if (a is NumberValue && b is NumberValue) {
+      return NumberValue(a.value + b.value);
+    }
+    if (a is ComplexValue || b is ComplexValue) {
+      final ca = _toComplex(a);
+      final cb = _toComplex(b);
+      return ComplexValue(ca.real + cb.real, ca.imaginary + cb.imaginary);
+    }
+    if (a is MatrixValue && b is MatrixValue) {
+      return _addMatrices(a, b);
+    }
+    if (a is VectorValue && b is VectorValue) {
+      return _addVectors(a, b);
+    }
+    throw RuntimeError('Cannot add ${a.runtimeType} and ${b.runtimeType}');
+  }
+
+  Value _subtract(Value a, Value b) {
+    if (a is NumberValue && b is NumberValue) {
+      return NumberValue(a.value - b.value);
+    }
+    if (a is ComplexValue || b is ComplexValue) {
+      final ca = _toComplex(a);
+      final cb = _toComplex(b);
+      return ComplexValue(ca.real - cb.real, ca.imaginary - cb.imaginary);
+    }
+    throw RuntimeError('Cannot subtract ${a.runtimeType} and ${b.runtimeType}');
+  }
+
+  Value _multiply(Value a, Value b) {
+    if (a is NumberValue && b is NumberValue) {
+      return NumberValue(a.value * b.value);
+    }
+    if (a is ComplexValue || b is ComplexValue) {
+      final ca = _toComplex(a);
+      final cb = _toComplex(b);
+      return ComplexValue(
+        ca.real * cb.real - ca.imaginary * cb.imaginary,
+        ca.real * cb.imaginary + ca.imaginary * cb.real,
+      );
+    }
+    if (a is MatrixValue && b is MatrixValue) {
+      return _multiplyMatrices(a, b);
+    }
+    throw RuntimeError('Cannot multiply ${a.runtimeType} and ${b.runtimeType}');
+  }
+
+  Value _divide(Value a, Value b) {
+    if (a is NumberValue && b is NumberValue) {
+      if (b.value == 0) throw RuntimeError('Division by zero');
+      return NumberValue(a.value / b.value);
+    }
+    if (a is ComplexValue || b is ComplexValue) {
+      final ca = _toComplex(a);
+      final cb = _toComplex(b);
+      final denom = cb.real * cb.real + cb.imaginary * cb.imaginary;
+      return ComplexValue(
+        (ca.real * cb.real + ca.imaginary * cb.imaginary) / denom,
+        (ca.imaginary * cb.real - ca.real * cb.imaginary) / denom,
+      );
+    }
+    throw RuntimeError('Cannot divide ${a.runtimeType} by ${b.runtimeType}');
+  }
+
+  Value _power(Value a, Value b) {
+    if (a is NumberValue && b is NumberValue) {
+      return NumberValue(math.pow(a.value, b.value).toDouble());
+    }
+    throw RuntimeError(
+      'Cannot raise ${a.runtimeType} to power of ${b.runtimeType}',
+    );
+  }
+
+  Value _modulo(Value a, Value b) {
+    if (a is NumberValue && b is NumberValue) {
+      return NumberValue(a.value % b.value);
+    }
+    throw RuntimeError(
+      'Cannot take modulo of ${a.runtimeType} and ${b.runtimeType}',
+    );
+  }
+
+  Value _evaluateUnaryOp(BoundUnaryOperation op) {
+    final operand = _evaluateExpression(op.operand);
+
+    return switch (op.operator) {
+      BoundUnaryOperator.negate => _negate(operand),
+      BoundUnaryOperator.factorial => _factorial(operand),
+      BoundUnaryOperator.absoluteValue => _absolute(operand),
+      BoundUnaryOperator.not => BooleanValue(!_isTruthy(operand)),
+    };
+  }
+
+  Value _negate(Value v) {
+    if (v is NumberValue) return NumberValue(-v.value);
+    if (v is ComplexValue) return ComplexValue(-v.real, -v.imaginary);
+    throw RuntimeError('Cannot negate ${v.runtimeType}');
+  }
+
+  Value _factorial(Value v) {
+    if (v is! NumberValue) throw RuntimeError('Factorial requires a number');
+    final n = v.value.toInt();
+    if (n < 0 || n != v.value)
+      throw RuntimeError('Factorial requires non-negative integer');
+
+    int result = 1;
+    for (int i = 2; i <= n; i++) result *= i;
+    return NumberValue(result.toDouble());
+  }
+
+  Value _absolute(Value v) {
+    if (v is NumberValue) return NumberValue(v.value.abs());
+    if (v is ComplexValue) {
+      final mag = math.sqrt(v.real * v.real + v.imaginary * v.imaginary);
+      return NumberValue(mag);
+    }
+    throw RuntimeError('Cannot take absolute value of ${v.runtimeType}');
+  }
+
+  Value _evaluateFunctionCall(BoundFunctionCall call) {
+    final fn = _builtins[call.functionName];
+    if (fn == null) {
+      throw RuntimeError('Unknown function: ${call.functionName}');
+    }
+
+    final args = call.arguments.map(_evaluateExpression).toList();
+    if (args.length != fn.arity) {
+      throw RuntimeError(
+        '${call.functionName} expects ${fn.arity} arguments, got ${args.length}',
+      );
+    }
+
+    return fn.execute(args);
+  }
+
+  Value _evaluateRoot(BoundRoot root) {
+    final radicand = _evaluateExpression(root.radicand);
+    final index = root.index != null
+        ? _evaluateExpression(root.index!) as NumberValue
+        : NumberValue(2);
+
+    if (radicand is! NumberValue) {
+      throw RuntimeError('Root requires numeric radicand');
+    }
+
+    final n = index.value;
+    final x = radicand.value;
+
+    if (n == 0) throw RuntimeError('0th root is undefined');
+
+    if (x < 0 && n % 2 == 0) {
+      // Even root of negative → complex
+      return ComplexValue(0, math.pow(x.abs(), 1 / n).toDouble());
+    }
+
+    return NumberValue(math.pow(x, 1 / n).toDouble());
+  }
+
+  Value _evaluateMatrix(BoundMatrixLiteral mat) {
+    final data = mat.rows.map((row) {
+      return row.map((e) {
+        final v = _evaluateExpression(e);
+        if (v is! NumberValue)
+          throw RuntimeError('Matrix elements must be numbers');
+        return v.value;
+      }).toList();
+    }).toList();
+
+    return MatrixValue(data);
+  }
+
+  Value _evaluateVector(BoundVectorLiteral vec) {
+    final components = vec.components.map((e) {
+      final v = _evaluateExpression(e);
+      if (v is! NumberValue)
+        throw RuntimeError('Vector components must be numbers');
+      return v.value;
+    }).toList();
+
+    return VectorValue(components);
+  }
+
+  Value _evaluateRecord(BoundRecordLiteral rec) {
+    final fields = rec.fields.map(
+      (key, value) => MapEntry(key, _evaluateExpression(value)),
+    );
+    return RecordValue(fields);
+  }
+
+  // Helper methods
+  ComplexValue _toComplex(Value v) {
+    if (v is ComplexValue) return v;
+    if (v is NumberValue) return ComplexValue(v.value, 0);
+    throw RuntimeError('Cannot convert ${v.runtimeType} to complex');
+  }
+
+  MatrixValue _addMatrices(MatrixValue a, MatrixValue b) {
+    if (a.rows != b.rows || a.cols != b.cols) {
+      throw RuntimeError('Matrix dimensions must match for addition');
+    }
+
+    final result = List.generate(
+      a.rows,
+      (i) => List.generate(a.cols, (j) => a.data[i][j] + b.data[i][j]),
+    );
+    return MatrixValue(result);
+  }
+
+  VectorValue _addVectors(VectorValue a, VectorValue b) {
+    if (a.dimension != b.dimension) {
+      throw RuntimeError('Vector dimensions must match');
+    }
+
+    final result = List.generate(
+      a.dimension,
+      (i) => a.components[i] + b.components[i],
+    );
+    return VectorValue(result);
+  }
+
+  MatrixValue _multiplyMatrices(MatrixValue a, MatrixValue b) {
+    if (a.cols != b.rows) {
+      throw RuntimeError('Invalid matrix dimensions for multiplication');
+    }
+
+    final result = List.generate(a.rows, (i) {
+      return List.generate(b.cols, (j) {
+        double sum = 0;
+        for (int k = 0; k < a.cols; k++) {
+          sum += a.data[i][k] * b.data[k][j];
+        }
+        return sum;
+      });
+    });
+
+    return MatrixValue(result);
+  }
+
+  bool _equals(Value a, Value b) {
+    if (a is NumberValue && b is NumberValue) return a.value == b.value;
+    if (a is BooleanValue && b is BooleanValue) return a.value == b.value;
+    if (a is StringValue && b is StringValue) return a.value == b.value;
+    return false;
+  }
+
+  BooleanValue _compare(Value a, Value b, bool Function(double, double) op) {
+    if (a is! NumberValue || b is! NumberValue) {
+      throw RuntimeError('Comparison requires numbers');
+    }
+    return BooleanValue(op(a.value, b.value));
+  }
+
+  bool _isTruthy(Value v) {
+    if (v is BooleanValue) return v.value;
+    if (v is NumberValue) return v.value != 0;
+    return true;
+  }
+}
+
+class NativeFunction {
+  final int arity;
+  final Value Function(List<Value>) execute;
+
+  const NativeFunction(this.arity, this.execute);
+}
+// ============================================================================
+// FILE: core/engine/evaluator/runtime_errors.dart
+// ============================================================================
+
+class RuntimeError extends Error {
+  final String message;
+  RuntimeError(this.message);
+
+  @override
+  String toString() => 'Runtime Error: $message';
+}
+// ============================================================================
+// FILE: core/engine/parser/ast.dart
+// Abstract Syntax Tree - represents program structure
+// ============================================================================
+
+import 'package:app/core/engine/parser/token.dart';
+
+/// Base class for all AST nodes
+sealed class ASTNode {
+  final int position;
+  const ASTNode(this.position);
+}
+
+// Expressions (produce values)
+sealed class Expression extends ASTNode {
+  const Expression(super.position);
+}
+
+class NumberLiteral extends Expression {
+  final double value;
+  const NumberLiteral(this.value, int position) : super(position);
+}
+
+class StringLiteral extends Expression {
+  final String value;
+  const StringLiteral(this.value, int position) : super(position);
+}
+
+class IdentifierExpression extends Expression {
+  final String name;
+  const IdentifierExpression(this.name, int position) : super(position);
+}
+
+class BinaryExpression extends Expression {
+  final Expression left;
+  final TokenType operator;
+  final Expression right;
+
+  const BinaryExpression(this.left, this.operator, this.right, int position)
+    : super(position);
+}
+
+class UnaryExpression extends Expression {
+  final TokenType operator;
+  final Expression operand;
+
+  const UnaryExpression(this.operator, this.operand, int position)
+    : super(position);
+}
+
+class CallExpression extends Expression {
+  final String functionName;
+  final List<Expression> arguments;
+
+  const CallExpression(this.functionName, this.arguments, int position)
+    : super(position);
+}
+
+class RootExpression extends Expression {
+  final Expression? index; // null for square root
+  final Expression radicand;
+
+  const RootExpression(this.radicand, this.index, int position)
+    : super(position);
+}
+
+class MatrixLiteral extends Expression {
+  final List<List<Expression>> rows;
+
+  const MatrixLiteral(this.rows, int position) : super(position);
+}
+
+class VectorLiteral extends Expression {
+  final List<Expression> components;
+
+  const VectorLiteral(this.components, int position) : super(position);
+}
+
+class RecordLiteral extends Expression {
+  final Map<String, Expression> fields;
+
+  const RecordLiteral(this.fields, int position) : super(position);
+}
+
+class ListLiteral extends Expression {
+  final List<Expression> elements;
+
+  const ListLiteral(this.elements, int position) : super(position);
+}
+
+class IfExpression extends Expression {
+  final Expression condition;
+  final Expression thenBranch;
+  final Expression elseBranch;
+
+  const IfExpression(
+    this.condition,
+    this.thenBranch,
+    this.elseBranch,
+    int position,
+  ) : super(position);
+}
+
+// Statements (perform actions)
+sealed class Statement extends ASTNode {
+  const Statement(super.position);
+}
+
+class ExpressionStatement extends Statement {
+  final Expression expression;
+
+  const ExpressionStatement(this.expression, int position) : super(position);
+}
+
+class LetStatement extends Statement {
+  final String name;
+  final Expression value;
+
+  const LetStatement(this.name, this.value, int position) : super(position);
+}
+
+class FunctionDeclaration extends Statement {
+  final String name;
+  final List<String> parameters;
+  final Expression body;
+
+  const FunctionDeclaration(this.name, this.parameters, this.body, int position)
+    : super(position);
+}
+// ============================================================================
+// FILE: core/engine/parser/parser.dart
+// Converts List<Token> → AST (recursive descent parser)
+// ============================================================================
+
+import 'package:app/core/engine/parser/ast.dart';
+import 'package:app/core/engine/parser/token.dart';
+import 'package:app/core/engine_result.dart';
+
+class Parser {
+  final List<Token> tokens;
+  int _current = 0;
+
+  Parser(this.tokens);
+
+  /// Parse a single statement or expression
+  ASTNode parse() {
+    try {
+      return _statement();
+    } catch (e) {
+      throw EngineError(
+        ErrorType.invalidSyntax,
+        e.toString(),
+        position: _peek().position,
+      );
+    }
+  }
+
+  Statement _statement() {
+    if (_match(TokenType.let)) return _letStatement();
+    Expression expression = _expression();
+    return ExpressionStatement(expression, expression.position);
+  }
+
+  LetStatement _letStatement() {
+    final name = _consume(TokenType.identifier, 'Expected variable name');
+    _consume(TokenType.equals, 'Expected = after variable name');
+    final value = _expression();
+    return LetStatement(name.lexeme, value, name.position);
+  }
+
+  Expression _expression() => _assignment();
+
+  Expression _assignment() {
+    final expr = _comparison();
+    // Future: handle assignment operators
+    return expr;
+  }
+
+  Expression _comparison() {
+    var expr = _additive();
+
+    while (_match(
+      TokenType.equals,
+      TokenType.notEquals,
+      TokenType.lessThan,
+      TokenType.greaterThan,
+      TokenType.lessOrEqual,
+      TokenType.greaterOrEqual,
+    )) {
+      final operator = _previous().type;
+      final right = _additive();
+      expr = BinaryExpression(expr, operator, right, expr.position);
+    }
+
+    return expr;
+  }
+
+  Expression _additive() {
+    var expr = _multiplicative();
+
+    while (_match(TokenType.plus, TokenType.minus)) {
+      final operator = _previous().type;
+      final right = _multiplicative();
+      expr = BinaryExpression(expr, operator, right, expr.position);
+    }
+
+    return expr;
+  }
+
+  Expression _multiplicative() {
+    var expr = _implicitMultiplication();
+
+    while (_match(TokenType.multiply, TokenType.divide)) {
+      final operator = _previous().type;
+      final right = _implicitMultiplication();
+      expr = BinaryExpression(expr, operator, right, expr.position);
+    }
+
+    return expr;
+  }
+
+  Expression _implicitMultiplication() {
+    var expr = _power();
+
+    // Handle implicit multiplication: 2x, 3(x+1), (x+1)(x-1)
+    while (_canImplicitMultiply()) {
+      final right = _power();
+      expr = BinaryExpression(expr, TokenType.multiply, right, expr.position);
+    }
+
+    return expr;
+  }
+
+  bool _canImplicitMultiply() {
+    final current = _peek().type;
+    final previous = _current > 0 ? tokens[_current - 1].type : null;
+
+    // After number or ) or ], before ( or identifier
+    return (previous == TokenType.number ||
+            previous == TokenType.rightParen ||
+            previous == TokenType.rightBracket) &&
+        (current == TokenType.leftParen ||
+            current == TokenType.identifier ||
+            current == TokenType.root);
+  }
+
+  Expression _power() {
+    var expr = _postfix();
+
+    if (_match(TokenType.power)) {
+      final right = _power(); // Right associative
+      expr = BinaryExpression(expr, TokenType.power, right, expr.position);
+    }
+
+    return expr;
+  }
+
+  Expression _postfix() {
+    var expr = _unary();
+
+    while (_match(TokenType.factorial)) {
+      expr = UnaryExpression(TokenType.factorial, expr, expr.position);
+    }
+
+    return expr;
+  }
+
+  Expression _unary() {
+    if (_match(TokenType.minus, TokenType.plus)) {
+      final operator = _previous().type;
+      final operand = _unary();
+      return UnaryExpression(
+        operator,
+        operand,
+        operator == TokenType.minus ? _previous().position : operand.position,
+      );
+    }
+
+    return _root();
+  }
+
+  Expression _root() {
+    if (_match(TokenType.root)) {
+      final rootPos = _previous().position;
+
+      // Check for index before root (e.g., 3√8)
+      Expression? index;
+      if (_current > 1 && tokens[_current - 2].type == TokenType.number) {
+        // Already consumed, need to backtrack
+        // For simplicity, require explicit nthrt() function for custom roots
+      }
+
+      final radicand = _call();
+      return RootExpression(radicand, index, rootPos);
+    }
+
+    return _call();
+  }
+
+  Expression _call() {
+    var expr = _primary();
+
+    if (expr is IdentifierExpression && _match(TokenType.leftParen)) {
+      final args = _arguments();
+      _consume(TokenType.rightParen, 'Expected ) after arguments');
+      expr = CallExpression(expr.name, args, expr.position);
+    }
+
+    return expr;
+  }
+
+  List<Expression> _arguments() {
+    final args = <Expression>[];
+
+    if (_peek().type == TokenType.rightParen) return args;
+
+    do {
+      args.add(_expression());
+    } while (_match(TokenType.comma));
+
+    return args;
+  }
+
+  Expression _primary() {
+    if (_match(TokenType.number)) {
+      final token = _previous();
+      return NumberLiteral(token.literal as double, token.position);
+    }
+
+    if (_match(TokenType.string)) {
+      final token = _previous();
+      return StringLiteral(token.literal as String, token.position);
+    }
+
+    if (_match(TokenType.identifier)) {
+      final token = _previous();
+      return IdentifierExpression(token.lexeme, token.position);
+    }
+
+    if (_match(TokenType.imaginaryUnit)) {
+      return NumberLiteral(0, _previous().position); // Will be bound to i
+    }
+
+    if (_match(TokenType.leftParen)) {
+      final expr = _expression();
+      _consume(TokenType.rightParen, 'Expected ) after expression');
+      return expr;
+    }
+
+    if (_match(TokenType.leftBracket)) {
+      return _matrixOrVector();
+    }
+
+    if (_match(TokenType.leftBrace)) {
+      return _recordLiteral();
+    }
+
+    throw EngineError(
+      ErrorType.unexpectedToken,
+      'Unexpected token: ${_peek().lexeme}',
+      position: _peek().position,
+    );
+  }
+
+  Expression _matrixOrVector() {
+    final rows = <List<Expression>>[];
+    var currentRow = <Expression>[];
+
+    if (_peek().type == TokenType.rightBracket) {
+      _advance();
+      return VectorLiteral([], _previous().position);
+    }
+
+    do {
+      currentRow.add(_expression());
+
+      if (_match(TokenType.semicolon)) {
+        rows.add(currentRow);
+        currentRow = <Expression>[];
+      } else if (_match(TokenType.comma)) {
+        continue;
+      }
+    } while (!_check(TokenType.rightBracket));
+
+    _consume(TokenType.rightBracket, 'Expected ]');
+
+    if (currentRow.isNotEmpty) rows.add(currentRow);
+
+    // Determine if matrix or vector
+    if (rows.length == 1) {
+      return VectorLiteral(rows[0], rows[0][0].position);
+    } else {
+      return MatrixLiteral(rows, rows[0][0].position);
+    }
+  }
+
+  Expression _recordLiteral() {
+    final fields = <String, Expression>{};
+
+    while (!_check(TokenType.rightBrace)) {
+      final name = _consume(TokenType.identifier, 'Expected field name');
+      _consume(TokenType.colon, 'Expected : after field name');
+      final value = _expression();
+      fields[name.lexeme] = value;
+
+      if (!_match(TokenType.comma)) break;
+    }
+
+    _consume(TokenType.rightBrace, 'Expected }');
+    return RecordLiteral(fields, fields.values.first.position);
+  }
+
+  bool _match(
+    TokenType type, [
+    TokenType? type2,
+    TokenType? type3,
+    TokenType? type4,
+    TokenType? type5,
+    TokenType? type6,
+  ]) {
+    if (_check(type)) {
+      _advance();
+      return true;
+    }
+    if (type2 != null && _check(type2)) {
+      _advance();
+      return true;
+    }
+    if (type3 != null && _check(type3)) {
+      _advance();
+      return true;
+    }
+    if (type4 != null && _check(type4)) {
+      _advance();
+      return true;
+    }
+    if (type5 != null && _check(type5)) {
+      _advance();
+      return true;
+    }
+    if (type6 != null && _check(type6)) {
+      _advance();
+      return true;
+    }
+    return false;
+  }
+
+  bool _check(TokenType type) {
+    if (_isAtEnd()) return false;
+    return _peek().type == type;
+  }
+
+  Token _advance() {
+    if (!_isAtEnd()) _current++;
+    return _previous();
+  }
+
+  bool _isAtEnd() => _peek().type == TokenType.eof;
+  Token _peek() => tokens[_current];
+  Token _previous() => tokens[_current - 1];
+
+  Token _consume(TokenType type, String message) {
+    if (_check(type)) return _advance();
+    throw EngineError(
+      ErrorType.unexpectedToken,
+      message,
+      position: _peek().position,
+    );
+  }
+}
+// ============================================================================
+// FILE: core/engine/parser/token.dart
+// Token types - these rarely change
+// ============================================================================
+
+enum TokenType {
+  // Literals
+  number,
+  identifier,
+  string,
+
+  // Operators
+  plus,
+  minus,
+  multiply,
+  divide,
+  power,
+  factorial,
+
+  // Comparison (for future conditionals)
+  equals,
+  notEquals,
+  lessThan,
+  greaterThan,
+  lessOrEqual,
+  greaterOrEqual,
+
+  // Delimiters
+  leftParen,
+  rightParen,
+  leftBracket,
+  rightBracket,
+  leftBrace,
+  rightBrace,
+  comma,
+  semicolon,
+  colon,
+
+  // Keywords (for future features)
+  let,
+  if_,
+  then,
+  else_,
+  for_,
+  in_,
+
+  // Special
+  root, // √
+  imaginaryUnit, // i
+
+  eof,
+}
+
+class Token {
+  final TokenType type;
+  final String lexeme;
+  final int position;
+  final dynamic literal; // For number tokens
+
+  const Token(this.type, this.lexeme, this.position, {this.literal});
+
+  @override
+  String toString() => 'Token($type, "$lexeme", $position)';
+}
+// ============================================================================
+// FILE: core/engine/parser/tokenizer.dart
+// Converts string → List<Token>
+// ============================================================================
+
+import 'package:app/core/engine/parser/token.dart';
+
+class Tokenizer {
+  final String input;
+  int _current = 0;
+
+  Tokenizer(this.input);
+
+  List<Token> tokenize() {
+    final tokens = <Token>[];
+
+    while (!_isAtEnd()) {
+      _skipWhitespace();
+      if (_isAtEnd()) break;
+
+      final token = _scanToken();
+      if (token != null) tokens.add(token);
+    }
+
+    tokens.add(Token(TokenType.eof, '', _current));
+    return tokens;
+  }
+
+  Token? _scanToken() {
+    final start = _current;
+    final c = _advance();
+
+    // Single character tokens
+    switch (c) {
+      case '+':
+        return Token(TokenType.plus, c, start);
+      case '-':
+        return Token(TokenType.minus, c, start);
+      case '*':
+        return Token(TokenType.multiply, c, start);
+      case '/':
+        return Token(TokenType.divide, c, start);
+      case '^':
+        return Token(TokenType.power, c, start);
+      case '!':
+        return Token(TokenType.factorial, c, start);
+      case '(':
+        return Token(TokenType.leftParen, c, start);
+      case ')':
+        return Token(TokenType.rightParen, c, start);
+      case '[':
+        return Token(TokenType.leftBracket, c, start);
+      case ']':
+        return Token(TokenType.rightBracket, c, start);
+      case '{':
+        return Token(TokenType.leftBrace, c, start);
+      case '}':
+        return Token(TokenType.rightBrace, c, start);
+      case ',':
+        return Token(TokenType.comma, c, start);
+      case ';':
+        return Token(TokenType.semicolon, c, start);
+      case ':':
+        return Token(TokenType.colon, c, start);
+      case '√':
+        return Token(TokenType.root, c, start);
+    }
+
+    // Numbers
+    if (_isDigit(c)) return _number(start);
+
+    // Identifiers and keywords
+    if (_isAlpha(c)) return _identifier(start);
+
+    // String literals
+    if (c == '"' || c == "'") return _string(start, c);
+
+    return null; // Skip unknown characters
+  }
+
+  Token _number(int start) {
+    while (_isDigit(_peek())) _advance();
+
+    // Decimal point
+    if (_peek() == '.' && _isDigit(_peekNext())) {
+      _advance(); // consume '.'
+      while (_isDigit(_peek())) _advance();
+    }
+
+    // Scientific notation
+    if (_peek() == 'e' || _peek() == 'E') {
+      _advance();
+      if (_peek() == '+' || _peek() == '-') _advance();
+      while (_isDigit(_peek())) _advance();
+    }
+
+    final lexeme = input.substring(start, _current);
+    final value = double.parse(lexeme);
+    return Token(TokenType.number, lexeme, start, literal: value);
+  }
+
+  Token _identifier(int start) {
+    while (_isAlphaNumeric(_peek())) _advance();
+
+    final lexeme = input.substring(start, _current);
+
+    // Check for keywords
+    final type = switch (lexeme) {
+      'let' => TokenType.let,
+      'if' => TokenType.if_,
+      'then' => TokenType.then,
+      'else' => TokenType.else_,
+      'for' => TokenType.for_,
+      'in' => TokenType.in_,
+      'i' => TokenType.imaginaryUnit,
+      _ => TokenType.identifier,
+    };
+
+    return Token(type, lexeme, start);
+  }
+
+  Token _string(int start, String quote) {
+    while (_peek() != quote && !_isAtEnd()) _advance();
+
+    if (_isAtEnd()) {
+      throw Exception('Unterminated string at position $start');
+    }
+
+    _advance(); // closing quote
+    final value = input.substring(start + 1, _current - 1);
+    return Token(TokenType.string, value, start, literal: value);
+  }
+
+  void _skipWhitespace() {
+    while (!_isAtEnd() && _peek().trim().isEmpty) _advance();
+  }
+
+  String _advance() => input[_current++];
+  String _peek() => _isAtEnd() ? '\x00' : input[_current];
+  String _peekNext() =>
+      _current + 1 >= input.length ? '\x00' : input[_current + 1];
+  bool _isAtEnd() => _current >= input.length;
+  bool _isDigit(String c) => c.codeUnitAt(0) >= 48 && c.codeUnitAt(0) <= 57;
+  bool _isAlpha(String c) {
+    final code = c.codeUnitAt(0);
+    return (code >= 65 && code <= 90) ||
+        (code >= 97 && code <= 122) ||
+        c == '_';
+  }
+
+  bool _isAlphaNumeric(String c) => _isAlpha(c) || _isDigit(c);
+}
+
+// ============================================================================
+// FILE: core/engine_result.dart
+// Result types for the entire engine
+// ============================================================================
+
+import 'package:app/core/eval_context.dart';
+import 'package:app/core/eval_types.dart';
+
+sealed class EngineResult {
+  const EngineResult();
+}
+
+class EngineSuccess extends EngineResult {
+  final Value value;
+  final EvalContext context; // Updated context with new variables
+
+  const EngineSuccess(this.value, this.context);
+}
+
+class EngineError extends EngineResult {
+  final ErrorType type;
+  final String message;
+  final int? position; // Character position in input
+  final String? hint; // Helpful suggestion
+
+  const EngineError(this.type, this.message, {this.position, this.hint});
+
+  @override
+  String toString() {
+    final buf = StringBuffer('Error: $message');
+    if (position != null) buf.write(' at position $position');
+    if (hint != null) buf.write('\nHint: $hint');
+    return buf.toString();
+  }
+}
+
+enum ErrorType {
+  // Parse errors
+  unexpectedToken,
+  unexpectedEndOfInput,
+  invalidSyntax,
+
+  // Binding errors
+  undefinedVariable,
+  undefinedFunction,
+  typeMismatch,
+  wrongArgumentCount,
+
+  // Runtime errors
+  divisionByZero,
+  domainError,
+  dimensionMismatch,
+  overflow,
+  recursionLimit,
+
+  // General
+  unknown,
+}
+// ============================================================================
+// FILE: core/eval_context.dart
+// Runtime context (variables, functions, settings)
+// ============================================================================
+
+import 'package:app/core/eval_types.dart';
+
+enum AngleMode { radians, degrees }
+
+enum BaseMode { decimal, binary, octal, hexadecimal }
+
+enum DisplayMode { normal, engineering, scientific }
+
+class EvalContext {
+  final Map<String, Value> variables;
+  final Map<String, FunctionDefinition> functions;
+  final AngleMode angleMode;
+  final BaseMode baseMode;
+  final DisplayMode displayMode;
+  final bool exactMode; // Use fractions when possible
+
+  const EvalContext({
+    this.variables = const {},
+    this.functions = const {},
+    this.angleMode = AngleMode.radians,
+    this.baseMode = BaseMode.decimal,
+    this.displayMode = DisplayMode.normal,
+    this.exactMode = false,
+  });
+
+  EvalContext copyWith({
+    Map<String, Value>? variables,
+    Map<String, FunctionDefinition>? functions,
+    AngleMode? angleMode,
+    BaseMode? baseMode,
+    DisplayMode? displayMode,
+    bool? exactMode,
+  }) {
+    return EvalContext(
+      variables: variables ?? this.variables,
+      functions: functions ?? this.functions,
+      angleMode: angleMode ?? this.angleMode,
+      baseMode: baseMode ?? this.baseMode,
+      displayMode: displayMode ?? this.displayMode,
+      exactMode: exactMode ?? this.exactMode,
+    );
+  }
+}
+
+class FunctionDefinition {
+  final List<String> parameters;
+  final dynamic body; // Can be AST node or native function
+  final bool isNative;
+
+  const FunctionDefinition(this.parameters, this.body, {this.isNative = false});
+}
+// ============================================================================
+// FILE: core/eval_types.dart
+// Core type definitions that won't change
+// ============================================================================
+
+/// Represents all possible value types in the calculator
+sealed class Value {
+  const Value();
+
+  /// Convert to display string
+  String toDisplayString();
+
+  /// Convert to double if possible (for compatibility)
+  double? toDouble();
+}
+
+class NumberValue extends Value {
+  final double value;
+  const NumberValue(this.value);
+
+  @override
+  String toDisplayString() => value.toString();
+
+  @override
+  double toDouble() => value;
+}
+
+class ComplexValue extends Value {
+  final double real;
+  final double imaginary;
+  const ComplexValue(this.real, this.imaginary);
+
+  @override
+  String toDisplayString() {
+    if (imaginary.abs() < 1e-10) return real.toStringAsFixed(4);
+    if (real.abs() < 1e-10) return '${imaginary.toStringAsFixed(4)}i';
+    final sign = imaginary >= 0 ? '+' : '-';
+    return '${real.toStringAsFixed(4)}$sign${imaginary.abs().toStringAsFixed(4)}i';
+  }
+
+  @override
+  double? toDouble() => imaginary.abs() < 1e-10 ? real : null;
+}
+
+class MatrixValue extends Value {
+  final List<List<double>> data;
+  final int rows;
+  final int cols;
+
+  MatrixValue(this.data)
+    : rows = data.length,
+      cols = data.isEmpty ? 0 : data[0].length;
+
+  @override
+  String toDisplayString() {
+    return data.map((row) => '[${row.join(', ')}]').join('\n');
+  }
+
+  @override
+  double? toDouble() => rows == 1 && cols == 1 ? data[0][0] : null;
+}
+
+class VectorValue extends Value {
+  final List<double> components;
+  const VectorValue(this.components);
+
+  int get dimension => components.length;
+
+  @override
+  String toDisplayString() {
+    return '(${components.map((c) => c.toStringAsFixed(4)).join(', ')})';
+  }
+
+  @override
+  double? toDouble() => null;
+}
+
+class FractionValue extends Value {
+  final int numerator;
+  final int denominator;
+  const FractionValue(this.numerator, this.denominator);
+
+  @override
+  String toDisplayString() {
+    if (denominator == 1) return '$numerator';
+    return '$numerator/$denominator';
+  }
+
+  @override
+  double toDouble() => numerator / denominator;
+}
+
+class BooleanValue extends Value {
+  final bool value;
+  const BooleanValue(this.value);
+
+  @override
+  String toDisplayString() => value ? 'true' : 'false';
+
+  @override
+  double? toDouble() => null;
+}
+
+class StringValue extends Value {
+  final String value;
+  const StringValue(this.value);
+
+  @override
+  String toDisplayString() => value;
+
+  @override
+  double? toDouble() => double.tryParse(value);
+}
+
+// For future geometry, finance, etc.
+class RecordValue extends Value {
+  final Map<String, Value> fields;
+  const RecordValue(this.fields);
+
+  @override
+  String toDisplayString() {
+    return fields.entries
+        .map((e) => '${e.key}: ${e.value.toDisplayString()}')
+        .join(', ');
+  }
+
+  @override
+  double? toDouble() => null;
+}
+
+class ListValue extends Value {
+  final List<Value> values;
+  const ListValue(this.values);
+
+  @override
+  String toDisplayString() {
+    return '[${values.map((v) => v.toDisplayString()).join(', ')}]';
+  }
+
+  @override
+  double? toDouble() => null;
+}
+
+// ============================================================================
+// This architecture supports:
+// - All current features (scientific calc, matrices, complex numbers)
+// - Easy addition of new value types (geometry shapes, finance records)
+// - Type checking in binder phase
+// - Clean separation of concerns
+// - Incremental feature additions
+// ============================================================================
+

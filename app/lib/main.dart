@@ -49,16 +49,25 @@ class CalculatorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.watch<ThemeProvider>();
-
-    return MaterialApp(
-      title: 'Scientific Calculator',
-      theme: theme.theme,
-      home: CalculatorHome(
-        calculatorService: calculatorService,
-        functionService: functionService,
-        conversionService: conversionService,
-      ),
+    return Consumer<ThemeProvider>(
+      builder: (context, provider, _) {
+        return AnimatedTheme(
+          data: provider.theme,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.fastOutSlowIn,
+          child: MaterialApp(
+            title: "Tritium",
+            theme: provider.theme,
+            darkTheme: provider.theme,
+            themeMode: provider.currentThemeGroup,
+            home: CalculatorHome(
+              calculatorService: calculatorService,
+              functionService: functionService,
+              conversionService: conversionService,
+            ),
+          ),
+        );
+      },
     );
   }
 }

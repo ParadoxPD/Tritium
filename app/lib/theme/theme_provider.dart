@@ -4,7 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'theme_data.dart';
 
 enum ThemeType {
-  // Dark Themes
+  // --------------------
+  // DARK THEMES
+  // --------------------
   oneDarkPro,
   gruvbox,
   nord,
@@ -16,12 +18,37 @@ enum ThemeType {
   catppuccinMocha,
   ayuDark,
 
-  // Light Themes
+  defaultDark,
+  midnight,
+  amoledBlack,
+  darkOcean,
+  forestNight,
+  purpleDreams,
+  cyberpunk,
+  sunset,
+
+  // --------------------
+  // LIGHT THEMES
+  // --------------------
   githubLight,
   oneLight,
   solarizedLight,
   catppuccinLatte,
   everforestLight,
+
+  defaultLight,
+
+  // --------------------
+  // AUTO-GENERATED PASTELS
+  // --------------------
+  pastelBlue,
+  pastelMint,
+  pastelLavender,
+  pastelPeach,
+  pastelRose,
+
+  //Dynamic Pastel
+  customPastel,
 }
 
 class ThemeProvider extends ChangeNotifier {
@@ -31,6 +58,8 @@ class ThemeProvider extends ChangeNotifier {
 
   static const _themeKey = 'selected_theme';
   static const _themeGroupKey = 'selected_theme_group';
+  static const _pastelSeedKey = 'pastel_seed';
+  int? _customPastelSeed;
 
   ThemeProvider() {
     _loadTheme();
@@ -40,13 +69,13 @@ class ThemeProvider extends ChangeNotifier {
   ThemeData get theme => _currentTheme.toThemeData();
   ThemeType get themeType => _themeType;
   ThemeMode get currentThemeGroup => _currentThemeGroup;
+  String get pastelSeedKey => _pastelSeedKey;
 
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
     final themeName = prefs.getString(_themeKey) ?? 'oneDarkPro';
     final themeGroup = prefs.getString(_themeGroupKey) ?? 'dark';
 
-    // Safely find the theme from the enum string
     _themeType = ThemeType.values.firstWhere(
       (t) => t.name == themeName,
       orElse: () => ThemeType.oneDarkPro,
@@ -56,36 +85,18 @@ class ThemeProvider extends ChangeNotifier {
         ? ThemeMode.dark
         : ThemeMode.light;
 
+    _customPastelSeed = prefs.getInt(_pastelSeedKey);
+
     _updateTheme();
-    notifyListeners(); // Ensure UI updates after loading from disk
+    notifyListeners();
   }
 
   Future<void> setTheme(ThemeType type) async {
     _themeType = type;
-    switch (_themeType) {
-      // Dark
-      case ThemeType.oneDarkPro:
-      case ThemeType.gruvbox:
-      case ThemeType.nord:
-      case ThemeType.tokyoNight:
-      case ThemeType.dracula:
-      case ThemeType.nightOwl:
-      case ThemeType.githubDark:
-      case ThemeType.monokai:
-      case ThemeType.catppuccinMocha:
-      case ThemeType.ayuDark:
-        _currentThemeGroup = ThemeMode.dark;
-        break;
 
-      // Light
-      case ThemeType.githubLight:
-      case ThemeType.oneLight:
-      case ThemeType.solarizedLight:
-      case ThemeType.catppuccinLatte:
-      case ThemeType.everforestLight:
-        _currentThemeGroup = ThemeMode.light;
-        break;
-    }
+    _currentThemeGroup = lightThemes.contains(type)
+        ? ThemeMode.light
+        : ThemeMode.dark;
 
     _updateTheme();
 
@@ -98,7 +109,7 @@ class ThemeProvider extends ChangeNotifier {
 
   void _updateTheme() {
     switch (_themeType) {
-      // Dark
+      // ---------------- DARK ----------------
       case ThemeType.oneDarkPro:
         _currentTheme = OneDarkProTheme();
         break;
@@ -130,7 +141,32 @@ class ThemeProvider extends ChangeNotifier {
         _currentTheme = AyuDarkTheme();
         break;
 
-      // Light
+      case ThemeType.defaultDark:
+        _currentTheme = DefaultDarkTheme();
+        break;
+      case ThemeType.midnight:
+        _currentTheme = MidnightTheme();
+        break;
+      case ThemeType.amoledBlack:
+        _currentTheme = AmoledBlackTheme();
+        break;
+      case ThemeType.darkOcean:
+        _currentTheme = DarkOceanTheme();
+        break;
+      case ThemeType.forestNight:
+        _currentTheme = ForestNightTheme();
+        break;
+      case ThemeType.purpleDreams:
+        _currentTheme = PurpleDreamsTheme();
+        break;
+      case ThemeType.cyberpunk:
+        _currentTheme = CyberpunkTheme();
+        break;
+      case ThemeType.sunset:
+        _currentTheme = SunsetTheme();
+        break;
+
+      // ---------------- LIGHT ----------------
       case ThemeType.githubLight:
         _currentTheme = GitHubLightTheme();
         break;
@@ -146,7 +182,46 @@ class ThemeProvider extends ChangeNotifier {
       case ThemeType.everforestLight:
         _currentTheme = EverforestLightTheme();
         break;
+      case ThemeType.defaultLight:
+        _currentTheme = DefaultLightTheme();
+        break;
+
+      // -------- AUTO-GENERATED PASTELS --------
+      case ThemeType.pastelBlue:
+        _currentTheme = PastelGeneratedTheme(const Color(0xFF5DA9E9));
+        break;
+      case ThemeType.pastelMint:
+        _currentTheme = PastelGeneratedTheme(const Color(0xFF4ADE80));
+        break;
+      case ThemeType.pastelLavender:
+        _currentTheme = PastelGeneratedTheme(const Color(0xFFB692F6));
+        break;
+      case ThemeType.pastelPeach:
+        _currentTheme = PastelGeneratedTheme(const Color(0xFFFFB4A2));
+        break;
+      case ThemeType.pastelRose:
+        _currentTheme = PastelGeneratedTheme(const Color(0xFFF472B6));
+        break;
+
+      case ThemeType.customPastel:
+        final seed = _customPastelSeed ?? 0xFF5DA9E9;
+        _currentTheme = PastelGeneratedTheme(Color(seed));
+        break;
     }
+  }
+
+  Future<void> setCustomPastel(Color seed) async {
+    _customPastelSeed = seed.value;
+    _themeType = ThemeType.customPastel;
+    _currentThemeGroup = ThemeMode.light;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_pastelSeedKey, seed.value);
+    await prefs.setString(_themeKey, _themeType.name);
+    await prefs.setString(_themeGroupKey, _currentThemeGroup.name);
+
+    _updateTheme();
+    notifyListeners();
   }
 
   // Helper method to access theme colors from context
@@ -156,6 +231,7 @@ class ThemeProvider extends ChangeNotifier {
 
   static AppThemeData getThemeData(ThemeType type) {
     switch (type) {
+      // -------- ORIGINAL DARK --------
       case ThemeType.oneDarkPro:
         return OneDarkProTheme();
       case ThemeType.gruvbox:
@@ -176,6 +252,24 @@ class ThemeProvider extends ChangeNotifier {
         return CatppuccinMochaTheme();
       case ThemeType.ayuDark:
         return AyuDarkTheme();
+      case ThemeType.defaultDark:
+        return DefaultDarkTheme();
+      case ThemeType.midnight:
+        return MidnightTheme();
+      case ThemeType.amoledBlack:
+        return AmoledBlackTheme();
+      case ThemeType.darkOcean:
+        return DarkOceanTheme();
+      case ThemeType.forestNight:
+        return ForestNightTheme();
+      case ThemeType.purpleDreams:
+        return PurpleDreamsTheme();
+      case ThemeType.cyberpunk:
+        return CyberpunkTheme();
+      case ThemeType.sunset:
+        return SunsetTheme();
+
+      // -------- ORIGINAL LIGHT --------
       case ThemeType.githubLight:
         return GitHubLightTheme();
       case ThemeType.oneLight:
@@ -186,10 +280,25 @@ class ThemeProvider extends ChangeNotifier {
         return CatppuccinLatteTheme();
       case ThemeType.everforestLight:
         return EverforestLightTheme();
+      case ThemeType.defaultLight:
+        return DefaultLightTheme();
+
+      // -------- AUTO-GENERATED PASTELS --------
+      case ThemeType.pastelBlue:
+        return PastelGeneratedTheme(const Color(0xFF5DA9E9));
+      case ThemeType.pastelMint:
+        return PastelGeneratedTheme(const Color(0xFF4ADE80));
+      case ThemeType.pastelLavender:
+        return PastelGeneratedTheme(const Color(0xFFB692F6));
+      case ThemeType.pastelPeach:
+        return PastelGeneratedTheme(const Color(0xFFFFB4A2));
+      case ThemeType.pastelRose:
+        return PastelGeneratedTheme(const Color(0xFFF472B6));
+      case ThemeType.customPastel:
+        return PastelGeneratedTheme(const Color(0xFF5DA9E9));
     }
   }
 
-  // Add these to your ThemeProvider class
   List<ThemeType> get darkThemes => [
     ThemeType.oneDarkPro,
     ThemeType.gruvbox,
@@ -201,6 +310,14 @@ class ThemeProvider extends ChangeNotifier {
     ThemeType.monokai,
     ThemeType.catppuccinMocha,
     ThemeType.ayuDark,
+    ThemeType.defaultDark,
+    ThemeType.midnight,
+    ThemeType.amoledBlack,
+    ThemeType.darkOcean,
+    ThemeType.forestNight,
+    ThemeType.purpleDreams,
+    ThemeType.cyberpunk,
+    ThemeType.sunset,
   ];
 
   List<ThemeType> get lightThemes => [
@@ -209,5 +326,11 @@ class ThemeProvider extends ChangeNotifier {
     ThemeType.solarizedLight,
     ThemeType.catppuccinLatte,
     ThemeType.everforestLight,
+    ThemeType.defaultLight,
+    ThemeType.pastelBlue,
+    ThemeType.pastelMint,
+    ThemeType.pastelLavender,
+    ThemeType.pastelPeach,
+    ThemeType.pastelRose,
   ];
 }

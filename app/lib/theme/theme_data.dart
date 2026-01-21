@@ -174,6 +174,142 @@ class AyuDarkColors {
   static const yellow = Color(0xFFFFB454);
 }
 
+class DefaultDarkColors {
+  static const background = Color(0xFF121212);
+  static const surface = Color(0xFF1E1E1E);
+  static const panel = Color(0xFF252525);
+  static const foreground = Color(0xFFE0E0E0);
+  static const muted = Color(0xFF9E9E9E);
+  static const subtle = Color(0xFF2C2C2C);
+
+  static const blue = Color(0xFF64B5F6);
+  static const green = Color(0xFF81C784);
+  static const red = Color(0xFFE57373);
+  static const orange = Color(0xFFFFB74D);
+  static const purple = Color(0xFFBA68C8);
+  static const cyan = Color(0xFF4DD0E1);
+  static const yellow = Color(0xFFFFF176);
+}
+
+class MidnightColors {
+  static const background = Color(0xFF0B0F1A);
+  static const surface = Color(0xFF111827);
+  static const panel = Color(0xFF1A2238);
+  static const foreground = Color(0xFFE5E7EB);
+  static const muted = Color(0xFF9CA3AF);
+  static const subtle = Color(0xFF1F2937);
+
+  static const blue = Color(0xFF60A5FA);
+  static const green = Color(0xFF34D399);
+  static const red = Color(0xFFF87171);
+  static const orange = Color(0xFFFBBF24);
+  static const purple = Color(0xFFA78BFA);
+  static const cyan = Color(0xFF22D3EE);
+  static const yellow = Color(0xFFFDE68A);
+}
+
+class AmoledBlackColors {
+  static const background = Color(0xFF000000);
+  static const surface = Color(0xFF050505);
+  static const panel = Color(0xFF0A0A0A);
+  static const foreground = Color(0xFFEAEAEA);
+  static const muted = Color(0xFF888888);
+  static const subtle = Color(0xFF121212);
+
+  static const blue = Color(0xFF82B1FF);
+  static const green = Color(0xFF69F0AE);
+  static const red = Color(0xFFFF5252);
+  static const orange = Color(0xFFFFAB40);
+  static const purple = Color(0xFFB388FF);
+  static const cyan = Color(0xFF84FFFF);
+  static const yellow = Color(0xFFFFF59D);
+}
+
+class DarkOceanColors {
+  static const background = Color(0xFF0A192F);
+  static const surface = Color(0xFF112240);
+  static const panel = Color(0xFF1B2D4F);
+  static const foreground = Color(0xFFCCD6F6);
+  static const muted = Color(0xFF8892B0);
+  static const subtle = Color(0xFF233554);
+
+  static const blue = Color(0xFF64FFDA);
+  static const green = Color(0xFF2EE59D);
+  static const red = Color(0xFFFF6B6B);
+  static const orange = Color(0xFFFFB86B);
+  static const purple = Color(0xFFC792EA);
+  static const cyan = Color(0xFF7FDBCA);
+  static const yellow = Color(0xFFFFE066);
+}
+
+class ForestNightColors {
+  static const background = Color(0xFF0F1F17);
+  static const surface = Color(0xFF1A3325);
+  static const panel = Color(0xFF243F2E);
+  static const foreground = Color(0xFFD8F3DC);
+  static const muted = Color(0xFF95B8A2);
+  static const subtle = Color(0xFF2F4F3A);
+
+  static const blue = Color(0xFF74C0FC);
+  static const green = Color(0xFF69DB7C);
+  static const red = Color(0xFFFF8787);
+  static const orange = Color(0xFFFFA94D);
+  static const purple = Color(0xFFB197FC);
+  static const cyan = Color(0xFF66D9E8);
+  static const yellow = Color(0xFFFFEC99);
+}
+
+class PurpleDreamsColors {
+  static const background = Color(0xFF1B1025);
+  static const surface = Color(0xFF26143A);
+  static const panel = Color(0xFF341A52);
+  static const foreground = Color(0xFFEADCF8);
+  static const muted = Color(0xFFB9A6D3);
+  static const subtle = Color(0xFF3E1F63);
+
+  static const blue = Color(0xFF8AB4F8);
+  static const green = Color(0xFF9AE6B4);
+  static const red = Color(0xFFFCA5A5);
+  static const orange = Color(0xFFFCD34D);
+  static const purple = Color(0xFFD8B4FE);
+  static const cyan = Color(0xFF67E8F9);
+  static const yellow = Color(0xFFFEF08A);
+}
+
+class CyberpunkColors {
+  static const background = Color(0xFF0A0F14);
+  static const surface = Color(0xFF111827);
+  static const panel = Color(0xFF1F2937);
+  static const foreground = Color(0xFFE5E7EB);
+  static const muted = Color(0xFF9CA3AF);
+  static const subtle = Color(0xFF374151);
+
+  static const blue = Color(0xFF00E5FF);
+  static const green = Color(0xFF1DE9B6);
+  static const red = Color(0xFFFF1744);
+  static const orange = Color(0xFFFF9100);
+  static const purple = Color(0xFFD500F9);
+  static const cyan = Color(0xFF18FFFF);
+  static const yellow = Color(0xFFFFEA00);
+}
+
+class SunsetColors {
+  static const background = Color(0xFF2B1D1A);
+  static const surface = Color(0xFF3B241F);
+  static const panel = Color(0xFF4A2F28);
+  static const foreground = Color(0xFFFFE4D6);
+  static const muted = Color(0xFFD6A99A);
+  static const subtle = Color(0xFF5C3A30);
+
+  static const blue = Color(0xFF7AA2F7);
+  static const green = Color(0xFF9ECE6A);
+  static const red = Color(0xFFF7768E);
+  static const orange = Color(0xFFFF9E64);
+  static const purple = Color(0xFFBB9AF7);
+  static const cyan = Color(0xFF7DCFFF);
+  static const yellow = Color(0xFFE0AF68);
+}
+
 // LIGHT THEMES
 class GitHubLightColors {
   static const background = Color(0xFFFFFFFF);
@@ -253,6 +389,23 @@ class EverforestLightColors {
   static const purple = Color(0xFFDF69BA);
   static const cyan = Color(0xFF35A77C);
   static const yellow = Color(0xFFDFA000);
+}
+
+class DefaultLightColors {
+  static const background = Color(0xFFF5F5F5);
+  static const surface = Color(0xFFFFFFFF);
+  static const panel = Color(0xFFEEEEEE);
+  static const foreground = Color(0xFF212121);
+  static const muted = Color(0xFF616161);
+  static const subtle = Color(0xFFBDBDBD);
+
+  static const blue = Color(0xFF1976D2);
+  static const green = Color(0xFF388E3C);
+  static const red = Color(0xFFD32F2F);
+  static const orange = Color(0xFFF57C00);
+  static const purple = Color(0xFF7B1FA2);
+  static const cyan = Color(0xFF0097A7);
+  static const yellow = Color(0xFFFBC02D);
 }
 
 /// Abstract theme definition
@@ -933,6 +1086,366 @@ class AyuDarkTheme extends AppThemeData {
   Color get buttonClear => AyuDarkColors.red;
 }
 
+class DefaultDarkTheme extends AppThemeData {
+  @override
+  Color get background => DefaultDarkColors.background;
+  @override
+  Color get surface => DefaultDarkColors.surface;
+  @override
+  Color get panel => DefaultDarkColors.panel;
+  @override
+  Color get foreground => DefaultDarkColors.foreground;
+  @override
+  Color get muted => DefaultDarkColors.muted;
+  @override
+  Color get subtle => DefaultDarkColors.subtle;
+
+  @override
+  Color get primary => DefaultDarkColors.blue;
+  @override
+  Color get secondary => DefaultDarkColors.cyan;
+  @override
+  Color get accent => DefaultDarkColors.purple;
+  @override
+  Color get success => DefaultDarkColors.green;
+  @override
+  Color get error => DefaultDarkColors.red;
+  @override
+  Color get warning => DefaultDarkColors.orange;
+
+  @override
+  Color get displayBackground => panel;
+  @override
+  Color get displayText => foreground;
+  @override
+  Color get buttonNumber => surface;
+  @override
+  Color get buttonOperator => DefaultDarkColors.orange;
+  @override
+  Color get buttonFunction => DefaultDarkColors.blue;
+  @override
+  Color get buttonSpecial => DefaultDarkColors.purple;
+  @override
+  Color get buttonEquals => DefaultDarkColors.green;
+  @override
+  Color get buttonClear => DefaultDarkColors.red;
+}
+
+class MidnightTheme extends AppThemeData {
+  @override
+  Color get background => MidnightColors.background;
+  @override
+  Color get surface => MidnightColors.surface;
+  @override
+  Color get panel => MidnightColors.panel;
+  @override
+  Color get foreground => MidnightColors.foreground;
+  @override
+  Color get muted => MidnightColors.muted;
+  @override
+  Color get subtle => MidnightColors.subtle;
+
+  @override
+  Color get primary => MidnightColors.blue;
+  @override
+  Color get secondary => MidnightColors.cyan;
+  @override
+  Color get accent => MidnightColors.purple;
+  @override
+  Color get success => MidnightColors.green;
+  @override
+  Color get error => MidnightColors.red;
+  @override
+  Color get warning => MidnightColors.orange;
+
+  @override
+  Color get displayBackground => panel;
+  @override
+  Color get displayText => foreground;
+  @override
+  Color get buttonNumber => surface;
+  @override
+  Color get buttonOperator => MidnightColors.orange;
+  @override
+  Color get buttonFunction => MidnightColors.blue;
+  @override
+  Color get buttonSpecial => MidnightColors.purple;
+  @override
+  Color get buttonEquals => MidnightColors.green;
+  @override
+  Color get buttonClear => MidnightColors.red;
+}
+
+class AmoledBlackTheme extends AppThemeData {
+  @override
+  Color get background => AmoledBlackColors.background;
+  @override
+  Color get surface => AmoledBlackColors.surface;
+  @override
+  Color get panel => AmoledBlackColors.panel;
+  @override
+  Color get foreground => AmoledBlackColors.foreground;
+  @override
+  Color get muted => AmoledBlackColors.muted;
+  @override
+  Color get subtle => AmoledBlackColors.subtle;
+
+  @override
+  Color get primary => AmoledBlackColors.blue;
+  @override
+  Color get secondary => AmoledBlackColors.cyan;
+  @override
+  Color get accent => AmoledBlackColors.purple;
+  @override
+  Color get success => AmoledBlackColors.green;
+  @override
+  Color get error => AmoledBlackColors.red;
+  @override
+  Color get warning => AmoledBlackColors.orange;
+
+  @override
+  Color get displayBackground => panel;
+  @override
+  Color get displayText => foreground;
+  @override
+  Color get buttonNumber => surface;
+  @override
+  Color get buttonOperator => AmoledBlackColors.orange;
+  @override
+  Color get buttonFunction => AmoledBlackColors.blue;
+  @override
+  Color get buttonSpecial => AmoledBlackColors.purple;
+  @override
+  Color get buttonEquals => AmoledBlackColors.green;
+  @override
+  Color get buttonClear => AmoledBlackColors.red;
+}
+
+class DarkOceanTheme extends AppThemeData {
+  @override
+  Color get background => DarkOceanColors.background;
+  @override
+  Color get surface => DarkOceanColors.surface;
+  @override
+  Color get panel => DarkOceanColors.panel;
+  @override
+  Color get foreground => DarkOceanColors.foreground;
+  @override
+  Color get muted => DarkOceanColors.muted;
+  @override
+  Color get subtle => DarkOceanColors.subtle;
+
+  @override
+  Color get primary => DarkOceanColors.blue;
+  @override
+  Color get secondary => DarkOceanColors.cyan;
+  @override
+  Color get accent => DarkOceanColors.purple;
+  @override
+  Color get success => DarkOceanColors.green;
+  @override
+  Color get error => DarkOceanColors.red;
+  @override
+  Color get warning => DarkOceanColors.orange;
+
+  @override
+  Color get displayBackground => panel;
+  @override
+  Color get displayText => foreground;
+  @override
+  Color get buttonNumber => surface;
+  @override
+  Color get buttonOperator => DarkOceanColors.orange;
+  @override
+  Color get buttonFunction => DarkOceanColors.blue;
+  @override
+  Color get buttonSpecial => DarkOceanColors.purple;
+  @override
+  Color get buttonEquals => DarkOceanColors.green;
+  @override
+  Color get buttonClear => DarkOceanColors.red;
+}
+
+class ForestNightTheme extends AppThemeData {
+  @override
+  Color get background => ForestNightColors.background;
+  @override
+  Color get surface => ForestNightColors.surface;
+  @override
+  Color get panel => ForestNightColors.panel;
+  @override
+  Color get foreground => ForestNightColors.foreground;
+  @override
+  Color get muted => ForestNightColors.muted;
+  @override
+  Color get subtle => ForestNightColors.subtle;
+
+  @override
+  Color get primary => ForestNightColors.green;
+  @override
+  Color get secondary => ForestNightColors.cyan;
+  @override
+  Color get accent => ForestNightColors.purple;
+  @override
+  Color get success => ForestNightColors.green;
+  @override
+  Color get error => ForestNightColors.red;
+  @override
+  Color get warning => ForestNightColors.orange;
+
+  @override
+  Color get displayBackground => panel;
+  @override
+  Color get displayText => foreground;
+  @override
+  Color get buttonNumber => surface;
+  @override
+  Color get buttonOperator => ForestNightColors.orange;
+  @override
+  Color get buttonFunction => ForestNightColors.green;
+  @override
+  Color get buttonSpecial => ForestNightColors.purple;
+  @override
+  Color get buttonEquals => ForestNightColors.green;
+  @override
+  Color get buttonClear => ForestNightColors.red;
+}
+
+class PurpleDreamsTheme extends AppThemeData {
+  @override
+  Color get background => PurpleDreamsColors.background;
+  @override
+  Color get surface => PurpleDreamsColors.surface;
+  @override
+  Color get panel => PurpleDreamsColors.panel;
+  @override
+  Color get foreground => PurpleDreamsColors.foreground;
+  @override
+  Color get muted => PurpleDreamsColors.muted;
+  @override
+  Color get subtle => PurpleDreamsColors.subtle;
+
+  @override
+  Color get primary => PurpleDreamsColors.purple;
+  @override
+  Color get secondary => PurpleDreamsColors.cyan;
+  @override
+  Color get accent => PurpleDreamsColors.blue;
+  @override
+  Color get success => PurpleDreamsColors.green;
+  @override
+  Color get error => PurpleDreamsColors.red;
+  @override
+  Color get warning => PurpleDreamsColors.orange;
+
+  @override
+  Color get displayBackground => panel;
+  @override
+  Color get displayText => foreground;
+  @override
+  Color get buttonNumber => surface;
+  @override
+  Color get buttonOperator => PurpleDreamsColors.orange;
+  @override
+  Color get buttonFunction => PurpleDreamsColors.purple;
+  @override
+  Color get buttonSpecial => PurpleDreamsColors.blue;
+  @override
+  Color get buttonEquals => PurpleDreamsColors.green;
+  @override
+  Color get buttonClear => PurpleDreamsColors.red;
+}
+
+class CyberpunkTheme extends AppThemeData {
+  @override
+  Color get background => CyberpunkColors.background;
+  @override
+  Color get surface => CyberpunkColors.surface;
+  @override
+  Color get panel => CyberpunkColors.panel;
+  @override
+  Color get foreground => CyberpunkColors.foreground;
+  @override
+  Color get muted => CyberpunkColors.muted;
+  @override
+  Color get subtle => CyberpunkColors.subtle;
+
+  @override
+  Color get primary => CyberpunkColors.blue;
+  @override
+  Color get secondary => CyberpunkColors.purple;
+  @override
+  Color get accent => CyberpunkColors.cyan;
+  @override
+  Color get success => CyberpunkColors.green;
+  @override
+  Color get error => CyberpunkColors.red;
+  @override
+  Color get warning => CyberpunkColors.orange;
+
+  @override
+  Color get displayBackground => panel;
+  @override
+  Color get displayText => foreground;
+  @override
+  Color get buttonNumber => surface;
+  @override
+  Color get buttonOperator => CyberpunkColors.orange;
+  @override
+  Color get buttonFunction => CyberpunkColors.blue;
+  @override
+  Color get buttonSpecial => CyberpunkColors.purple;
+  @override
+  Color get buttonEquals => CyberpunkColors.green;
+  @override
+  Color get buttonClear => CyberpunkColors.red;
+}
+
+class SunsetTheme extends AppThemeData {
+  @override
+  Color get background => SunsetColors.background;
+  @override
+  Color get surface => SunsetColors.surface;
+  @override
+  Color get panel => SunsetColors.panel;
+  @override
+  Color get foreground => SunsetColors.foreground;
+  @override
+  Color get muted => SunsetColors.muted;
+  @override
+  Color get subtle => SunsetColors.subtle;
+
+  @override
+  Color get primary => SunsetColors.orange;
+  @override
+  Color get secondary => SunsetColors.purple;
+  @override
+  Color get accent => SunsetColors.red;
+  @override
+  Color get success => SunsetColors.green;
+  @override
+  Color get error => SunsetColors.red;
+  @override
+  Color get warning => SunsetColors.yellow;
+
+  @override
+  Color get displayBackground => panel;
+  @override
+  Color get displayText => foreground;
+  @override
+  Color get buttonNumber => surface;
+  @override
+  Color get buttonOperator => SunsetColors.orange;
+  @override
+  Color get buttonFunction => SunsetColors.purple;
+  @override
+  Color get buttonSpecial => SunsetColors.red;
+  @override
+  Color get buttonEquals => SunsetColors.green;
+  @override
+  Color get buttonClear => SunsetColors.red;
+}
+
 // --- LIGHT THEME IMPLEMENTATIONS ---
 
 class GitHubLightTheme extends AppThemeData {
@@ -1184,6 +1697,161 @@ class EverforestLightTheme extends AppThemeData {
   Color get buttonEquals => EverforestLightColors.green;
   @override
   Color get buttonClear => EverforestLightColors.red;
+
+  @override
+  Color get primaryTextColor => Colors.black;
+
+  @override
+  Color get secondaryTextColor => Colors.white;
+}
+
+class DefaultLightTheme extends AppThemeData {
+  @override
+  Color get background => DefaultLightColors.background;
+  @override
+  Color get surface => DefaultLightColors.surface;
+  @override
+  Color get panel => DefaultLightColors.panel;
+  @override
+  Color get foreground => DefaultLightColors.foreground;
+  @override
+  Color get muted => DefaultLightColors.muted;
+  @override
+  Color get subtle => DefaultLightColors.subtle;
+
+  @override
+  Color get primary => DefaultLightColors.blue;
+  @override
+  Color get secondary => DefaultLightColors.cyan;
+  @override
+  Color get accent => DefaultLightColors.purple;
+  @override
+  Color get success => DefaultLightColors.green;
+  @override
+  Color get error => DefaultLightColors.red;
+  @override
+  Color get warning => DefaultLightColors.orange;
+
+  @override
+  Color get displayBackground => panel;
+  @override
+  Color get displayText => foreground;
+  @override
+  Color get buttonNumber => surface;
+  @override
+  Color get buttonOperator => DefaultLightColors.orange;
+  @override
+  Color get buttonFunction => DefaultLightColors.blue;
+  @override
+  Color get buttonSpecial => DefaultLightColors.purple;
+  @override
+  Color get buttonEquals => DefaultLightColors.green;
+  @override
+  Color get buttonClear => DefaultLightColors.red;
+
+  @override
+  Color get primaryTextColor => Colors.black;
+  @override
+  Color get secondaryTextColor => Colors.white;
+}
+
+class PastelThemeGenerator {
+  static OKLCH pastelize(
+    OKLCH base, {
+    double l = 0.92,
+    double c = 0.07,
+    double hueShift = 0,
+  }) {
+    return OKLCH(
+      l.clamp(0.0, 1.0),
+      c.clamp(0.0, 0.15),
+      (base.h + hueShift + 360) % 360,
+    );
+  }
+
+  static Color make(
+    AppThemeData theme,
+    OKLCH base, {
+    required double l,
+    required double c,
+    double hueShift = 0,
+  }) {
+    return theme.oklchToRgb(pastelize(base, l: l, c: c, hueShift: hueShift));
+  }
+}
+
+class PastelGeneratedTheme extends AppThemeData {
+  final Color seed;
+
+  late final OKLCH _base;
+
+  PastelGeneratedTheme(this.seed) {
+    _base = rgbToOklch(seed);
+  }
+
+  // --- Core Surfaces ---
+  @override
+  Color get background => oklchToRgb(OKLCH(0.96, 0.015, _base.h));
+
+  @override
+  Color get surface => oklchToRgb(OKLCH(0.93, 0.02, _base.h));
+
+  @override
+  Color get panel => oklchToRgb(OKLCH(0.90, 0.025, _base.h));
+
+  // --- Text ---
+  @override
+  Color get foreground => oklchToRgb(OKLCH(0.22, 0.02, _base.h));
+
+  @override
+  Color get muted => oklchToRgb(OKLCH(0.45, 0.02, _base.h));
+
+  @override
+  Color get subtle => oklchToRgb(OKLCH(0.80, 0.02, _base.h));
+
+  // --- Accents ---
+  @override
+  Color get primary => oklchToRgb(OKLCH(0.78, 0.09, _base.h));
+
+  @override
+  Color get secondary => oklchToRgb(OKLCH(0.76, 0.08, _base.h + 30));
+
+  @override
+  Color get accent => oklchToRgb(OKLCH(0.74, 0.08, _base.h - 30));
+
+  @override
+  Color get success => oklchToRgb(OKLCH(0.75, 0.09, _base.h + 120));
+
+  @override
+  Color get error => oklchToRgb(OKLCH(0.70, 0.10, _base.h + 180));
+
+  @override
+  Color get warning => oklchToRgb(OKLCH(0.78, 0.10, _base.h + 90));
+
+  // --- Calculator ---
+  @override
+  Color get displayBackground => panel;
+
+  @override
+  Color get displayText => foreground;
+
+  @override
+  Color get buttonNumber => surface;
+
+  @override
+  Color get buttonOperator => primary;
+
+  @override
+  Color get buttonFunction => secondary;
+
+  @override
+  Color get buttonSpecial => accent;
+
+  @override
+  Color get buttonEquals => success;
+
+  @override
+  Color get buttonClear => error;
 
   @override
   Color get primaryTextColor => Colors.black;

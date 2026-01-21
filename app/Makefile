@@ -9,6 +9,7 @@ create:
 	flutter clean
 	flutter pub get
 	flutter build apk --release
+	cp build/app/outputs/flutter-apk/app-release.apk ../release/tritium-release.apk
 	flutter install
 
 

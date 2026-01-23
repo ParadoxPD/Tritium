@@ -21,6 +21,10 @@ class LoggerService {
     _logger.log(Level.warning, message);
   }
 
+  void error(String message) {
+    _logger.log(Level.error, message);
+  }
+
   void debug(String message) {
     _logger.log(Level.debug, message);
   }

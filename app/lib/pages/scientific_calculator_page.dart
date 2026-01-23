@@ -448,12 +448,12 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
         child: TextField(
           controller: state.controller,
           focusNode: _inputFocusNode,
-          // Prevent system keyboard but allow cursor movement
           readOnly: true,
+
+          enableInteractiveSelection: true,
+
           scrollController: state.textScrollController,
           scrollPhysics: const BouncingScrollPhysics(),
-
-          showCursor: true,
           cursorColor: theme.primary,
           cursorWidth: 2,
           cursorRadius: const Radius.circular(2),
@@ -468,16 +468,49 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
           decoration: const InputDecoration(
             isDense: false,
             filled: false,
-
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
             disabledBorder: InputBorder.none,
             errorBorder: InputBorder.none,
             focusedErrorBorder: InputBorder.none,
-
             contentPadding: EdgeInsets.fromLTRB(0, 4, 0, 4),
           ),
+          contextMenuBuilder: (context, editableTextState) {
+            return AdaptiveTextSelectionToolbar(
+              anchors: editableTextState.contextMenuAnchors,
+              children: [
+                TextSelectionToolbarTextButton(
+                  padding: EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+                  onPressed: () async {
+                    final data = await Clipboard.getData(Clipboard.kTextPlain);
+                    if (data?.text == null) return;
+
+                    final selection = state.controller.selection;
+                    final text = state.controller.text;
+
+                    final newText = text.replaceRange(
+                      selection.start,
+                      selection.end,
+                      data!.text!,
+                    );
+
+                    state.controller.value = TextEditingValue(
+                      text: newText,
+                      selection: TextSelection.collapsed(
+                        offset: selection.start + data.text!.length,
+                      ),
+                    );
+
+                    editableTextState.hideToolbar();
+                  },
+                  child: const Text('Paste'),
+                ),
+              ],
+            );
+          },
+
+          showCursor: true,
           maxLines: 1,
         ),
       ),

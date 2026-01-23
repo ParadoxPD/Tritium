@@ -23,15 +23,24 @@ class NumberValue extends Value {
   const NumberValue(this.value);
 
   @override
-  String toDisplayString() => value.toString();
+  String toDisplayString() {
+    if (value.isNaN) return 'NaN';
+    if (value.isInfinite) return value.isNegative ? '-∞' : '∞';
+
+    // Integer check (safe for doubles)
+    if (value % 1 == 0) {
+      return value.toInt().toString();
+    }
+
+    // Trim floating-point noise
+    return value.toStringAsPrecision(12).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
 
   @override
   double toDouble() => value;
 
   @override
-  ValueType type() {
-    return ValueType.number;
-  }
+  ValueType type() => ValueType.number;
 }
 
 class ComplexValue extends Value {

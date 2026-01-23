@@ -4,151 +4,204 @@
 // ============================================================================
 
 import 'package:app/core/engine/parser/token.dart';
+import 'package:app/services/logging_service.dart';
 
 class Tokenizer {
   final String input;
+  final List<Token> tokens = [];
+  int _start = 0;
   int _current = 0;
+
+  LoggerService logger = LoggerService();
 
   Tokenizer(this.input);
 
   List<Token> tokenize() {
-    final tokens = <Token>[];
-
     while (!_isAtEnd()) {
-      _skipWhitespace();
-      if (_isAtEnd()) break;
-
-      final token = _scanToken();
-      if (token != null) tokens.add(token);
+      _start = _current;
+      _scanToken();
     }
 
     tokens.add(Token(TokenType.eof, '', _current));
     return tokens;
   }
 
-  Token? _scanToken() {
-    final start = _current;
+  void _scanToken() {
     final c = _advance();
 
-    // Single character tokens
     switch (c) {
-      case '+':
-        return Token(TokenType.plus, c, start);
-      case '-':
-        return Token(TokenType.minus, c, start);
-      case '*':
-        return Token(TokenType.multiply, c, start);
-      case '/':
-        return Token(TokenType.divide, c, start);
-      case '^':
-        return Token(TokenType.power, c, start);
-      case '%':
-        return Token(TokenType.percent, c, start);
-      case '!':
-        return Token(TokenType.factorial, c, start);
+      // Single characters
       case '(':
-        return Token(TokenType.leftParen, c, start);
+        _addToken(TokenType.leftParen);
+        break;
       case ')':
-        return Token(TokenType.rightParen, c, start);
+        _addToken(TokenType.rightParen);
+        break;
       case '[':
-        return Token(TokenType.leftBracket, c, start);
+        _addToken(TokenType.leftBracket);
+        break;
       case ']':
-        return Token(TokenType.rightBracket, c, start);
+        _addToken(TokenType.rightBracket);
+        break;
       case '{':
-        return Token(TokenType.leftBrace, c, start);
+        _addToken(TokenType.leftBrace);
+        break;
       case '}':
-        return Token(TokenType.rightBrace, c, start);
+        _addToken(TokenType.rightBrace);
+        break;
       case ',':
-        return Token(TokenType.comma, c, start);
+        _addToken(TokenType.comma);
+        break;
       case ';':
-        return Token(TokenType.semicolon, c, start);
-      case ':':
-        return Token(TokenType.colon, c, start);
+        _addToken(TokenType.semicolon);
+        break;
+      case '+':
+        _addToken(TokenType.plus);
+        break;
+      case '-':
+        _addToken(TokenType.minus);
+        break;
+      case '*':
+      case '×':
+        _addToken(TokenType.multiply);
+        break;
+      case '/':
+      case '÷':
+        _addToken(TokenType.divide);
+        break;
+      case '^':
+        _addToken(TokenType.power);
+        break;
+      case '%':
+        _addToken(TokenType.percent);
+        break;
       case '√':
-        return Token(TokenType.root, c, start);
+        _addToken(TokenType.root);
+        break;
+
+      // Multi-character operators
+      case '!':
+        _addToken(_match('=') ? TokenType.notEquals : TokenType.factorial);
+        break;
+      case '=':
+        if (_match('=')) _addToken(TokenType.equals);
+        // Add single '=' assignment here if your engine supports it
+        break;
+      case '<':
+        _addToken(_match('=') ? TokenType.lessOrEqual : TokenType.lessThan);
+        break;
+      case '>':
+        _addToken(
+          _match('=') ? TokenType.greaterOrEqual : TokenType.greaterThan,
+        );
+        break;
+
+      // Ignore whitespace
+      case ' ':
+      case '\r':
+      case '\t':
+      case '\n':
+        break;
+
+      case '"':
+      case "'":
+        _string(c);
+        break;
+
+      default:
+        if (_isDigit(c)) {
+          _number();
+        } else if (_isAlpha(c)) {
+          _identifier();
+        } else if (c == '.' && _isDigit(_peek())) {
+          // Handles leading decimals like .5
+          _number();
+        } else {
+          // Instead of returning null, throw a specific error
+          logger.error('Unexpected character "$c" at position $_current');
+          throw Exception('Unexpected character "$c" at position $_current');
+        }
+        break;
     }
-
-    // Numbers
-    if (_isDigit(c)) return _number(start);
-
-    // Identifiers and keywords
-    if (_isAlpha(c)) return _identifier(start);
-
-    // String literals
-    if (c == '"' || c == "'") return _string(start, c);
-
-    return null; // Skip unknown characters
   }
 
-  Token _number(int start) {
+  // --- Helpers ---
+
+  void _addToken(TokenType type, {Object? literal}) {
+    final text = input.substring(_start, _current);
+    tokens.add(Token(type, text, _start, literal: literal));
+  }
+
+  bool _match(String expected) {
+    if (_isAtEnd()) return false;
+    if (input[_current] != expected) return false;
+    _current++;
+    return true;
+  }
+
+  void _number() {
+    // If it started with a dot, we already consumed it in the switch,
+    // but the logic below handles the rest.
     while (_isDigit(_peek())) _advance();
 
-    // Decimal point
+    // Look for a fractional part
     if (_peek() == '.' && _isDigit(_peekNext())) {
-      _advance(); // consume '.'
+      _advance(); // Consume the "."
       while (_isDigit(_peek())) _advance();
     }
 
-    // Scientific notation
-    if (_peek() == 'e' || _peek() == 'E') {
-      _advance();
+    // Scientific notation: 1.2e-10
+    if ((_peek() == 'e' || _peek() == 'E') &&
+        (_isDigit(_peekNext()) || _peekNext() == '-' || _peekNext() == '+')) {
+      _advance(); // Consume 'e'
       if (_peek() == '+' || _peek() == '-') _advance();
       while (_isDigit(_peek())) _advance();
     }
 
-    final lexeme = input.substring(start, _current);
-    final value = double.parse(lexeme);
-    return Token(TokenType.number, lexeme, start, literal: value);
+    final value = double.parse(input.substring(_start, _current));
+    _addToken(TokenType.number, literal: value);
   }
 
-  Token _identifier(int start) {
+  void _identifier() {
     while (_isAlphaNumeric(_peek())) _advance();
 
-    final lexeme = input.substring(start, _current);
-
-    // Check for keywords
-    final type = switch (lexeme) {
-      'let' => TokenType.let,
-      'if' => TokenType.if_,
-      'then' => TokenType.then,
-      'else' => TokenType.else_,
-      'for' => TokenType.for_,
-      'in' => TokenType.in_,
-      'i' => TokenType.imaginaryUnit,
-      _ => TokenType.identifier,
-    };
-
-    return Token(type, lexeme, start);
+    final text = input.substring(_start, _current);
+    final type = _keywords[text] ?? TokenType.identifier;
+    _addToken(type);
   }
 
-  Token _string(int start, String quote) {
-    while (_peek() != quote && !_isAtEnd()) _advance();
-
-    if (_isAtEnd()) {
-      throw Exception('Unterminated string at position $start');
+  void _string(String quote) {
+    while (_peek() != quote && !_isAtEnd()) {
+      _advance();
     }
 
-    _advance(); // closing quote
-    final value = input.substring(start + 1, _current - 1);
-    return Token(TokenType.string, value, start, literal: value);
+    if (_isAtEnd()) throw Exception('Unterminated string.');
+
+    _advance(); // The closing quote
+    final value = input.substring(_start + 1, _current - 1);
+    _addToken(TokenType.string, literal: value);
   }
 
-  void _skipWhitespace() {
-    while (!_isAtEnd() && _peek().trim().isEmpty) _advance();
-  }
+  // --- Lookahead & Checks ---
 
   String _advance() => input[_current++];
   String _peek() => _isAtEnd() ? '\x00' : input[_current];
   String _peekNext() =>
-      _current + 1 >= input.length ? '\x00' : input[_current + 1];
+      (_current + 1 >= input.length) ? '\x00' : input[_current + 1];
   bool _isAtEnd() => _current >= input.length;
-  bool _isDigit(String c) => c.codeUnitAt(0) >= 48 && c.codeUnitAt(0) <= 57;
-  bool _isAlpha(String c) {
-    final code = c.codeUnitAt(0);
-    return (code >= 65 && code <= 90) ||
-        (code >= 97 && code <= 122) ||
-        c == '_';
-  }
-
+  bool _isDigit(String c) => RegExp(r'[0-9]').hasMatch(c);
+  bool _isAlpha(String c) => RegExp(r'[a-zA-Z_]').hasMatch(c);
   bool _isAlphaNumeric(String c) => _isAlpha(c) || _isDigit(c);
+
+  static const Map<String, TokenType> _keywords = {
+    'let': TokenType.let,
+    'if': TokenType.if_,
+    'then': TokenType.then,
+    'else': TokenType.else_,
+    'for': TokenType.for_,
+    'in': TokenType.in_,
+    'i': TokenType.imaginaryUnit,
+    'pi': TokenType.identifier, // You might want a specific type for constants
+    'e': TokenType.identifier,
+  };
 }

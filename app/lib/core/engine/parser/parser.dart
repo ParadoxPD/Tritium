@@ -6,11 +6,13 @@
 import 'package:app/core/engine/parser/ast.dart';
 import 'package:app/core/engine/parser/token.dart';
 import 'package:app/core/engine_result.dart';
+import 'package:app/services/logging_service.dart';
 
 class Parser {
   final List<Token> tokens;
   int _current = 0;
 
+  final logger = LoggerService();
   Parser(this.tokens);
 
   /// Parse a single statement or expression
@@ -18,6 +20,7 @@ class Parser {
     try {
       return _statement();
     } catch (e) {
+      logger.error(e.toString());
       throw EngineError(
         ErrorType.invalidSyntax,
         e.toString(),

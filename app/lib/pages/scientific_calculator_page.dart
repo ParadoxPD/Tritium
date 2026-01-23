@@ -11,6 +11,8 @@ import '../theme/theme_provider.dart';
 import 'equation_page.dart';
 import 'statistics_page.dart';
 
+enum CalculatorUIMode { scientific, basic }
+
 class ScientificCalculatorPage extends StatefulWidget {
   const ScientificCalculatorPage({super.key});
 
@@ -22,6 +24,7 @@ class ScientificCalculatorPage extends StatefulWidget {
 class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
   // Keep focus node to ensure cursor stays visible/blinking
   final FocusNode _inputFocusNode = FocusNode();
+  CalculatorUIMode _uiMode = CalculatorUIMode.scientific;
 
   @override
   void dispose() {
@@ -266,160 +269,209 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
     final themeProvider = context.watch<ThemeProvider>();
     final theme = themeProvider.currentTheme;
 
+    return Column(
+      children: [
+        // Display Section
+        _buildDisplaySection(theme, state),
+        // Keypad Section
+        _buildKeypadSection(theme, state),
+      ],
+    );
+  }
+
+  Widget _buildKeypadSection(AppThemeData theme, CalculatorState state) {
     final shiftColor = theme.shiftColor;
     final alphaColor = theme.alphaColor;
     final isShift = state.isShift;
     final isAlpha = state.isAlpha;
-
-    return Column(
-      children: [
-        // Display Section
-        Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-          decoration: BoxDecoration(
-            color: theme.displayBackground,
-            border: Border(
-              bottom: BorderSide(
-                color: theme.subtle.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Indicators Row
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: state.toggleShift,
-                    child: Selector<CalculatorState, bool>(
-                      selector: (_, s) => s.isShift,
-                      builder: (_, v, _) => _animatedIndicator(
-                        'S',
-                        shiftColor(theme.background),
-                        theme,
-                        v,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: state.toggleAlpha,
-                    child: Selector<CalculatorState, bool>(
-                      selector: (_, s) => s.isAlpha,
-                      builder: (_, v, _) => _animatedIndicator(
-                        'A',
-                        alphaColor(theme.background),
-                        theme,
-                        v,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: state.toggleHyp,
-                    child: Selector<CalculatorState, bool>(
-                      selector: (_, s) => s.isHyp,
-                      builder: (_, v, _) =>
-                          _animatedIndicator('HYP', theme.primary, theme, v),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: state.toggleAngleMode,
-                    child: Selector<CalculatorState, AngleMode>(
-                      selector: (_, s) => s.angleMode,
-                      builder: (_, mode, _) => _staticIndicator(
-                        mode == AngleMode.radians ? 'RAD' : 'DEG',
-                        theme.primary,
-                        theme,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(Icons.apps, color: theme.muted, size: 22),
-                    onPressed: () => _showModeMenu(context, state),
-                    tooltip: "Mode Menu",
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.palette_outlined,
-                      color: theme.muted,
-                      size: 22,
-                    ),
-                    onPressed: () => _showThemeSettings(context),
-                    tooltip: "Themes",
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // --- Editable Input Display ---
-              _buildEditorDisplay(theme, state),
-
-              const SizedBox(height: 8),
-
-              // Result Display
-              Selector<CalculatorState, String>(
-                selector: (_, s) => s.display,
-                builder: (_, value, _) => GestureDetector(
-                  onLongPress: () {
-                    // Copy the text to the clipboard
-                    Clipboard.setData(ClipboardData(text: value));
-
-                    // Optionally, show a confirmation message (e.g., a SnackBar)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Text copied to clipboard!'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w600,
-                      color: theme.displayText,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+    return Expanded(
+      // 1. Take up all remaining space in the Column
+      child: Align(
+        alignment: Alignment.bottomCenter, // 2. Keep the keypad at the bottom
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          child: SizedBox(
+            // 3. 'null' tells it to be as small as possible (wrap content)
+            //    'double.infinity' tells it to take all available space
+            height: _uiMode == CalculatorUIMode.basic ? null : double.infinity,
+            child: Container(
+              color: theme.background,
+              child: GridView.count(
+                crossAxisCount: 5,
+                padding: const EdgeInsets.all(8),
+                mainAxisSpacing: 6,
+                crossAxisSpacing: 6,
+                childAspectRatio: 1.0,
+                // 4. Required for "max needed height" to work
+                shrinkWrap: _uiMode == CalculatorUIMode.basic,
+                // 5. Disable scrolling in basic mode so it doesn't fight the height
+                physics: _uiMode == CalculatorUIMode.basic
+                    ? const NeverScrollableScrollPhysics()
+                    : const BouncingScrollPhysics(),
+                children: _buildCalculatorButtons(
+                  theme,
+                  shiftColor,
+                  alphaColor,
+                  isShift,
+                  isAlpha,
+                  state,
                 ),
               ),
-            ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisplaySection(AppThemeData theme, CalculatorState state) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      decoration: BoxDecoration(
+        color: theme.displayBackground,
+        border: Border(
+          bottom: BorderSide(
+            color: theme.subtle.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Indicators Row
+          _buildIndicatorRow(theme, state),
+
+          const SizedBox(height: 12),
+          // --- Editable Input Display ---
+          _buildEditorDisplay(theme, state),
+
+          const SizedBox(height: 8),
+
+          // Result Display
+          Selector<CalculatorState, String>(
+            selector: (_, s) => s.display,
+            builder: (_, value, _) => GestureDetector(
+              onLongPress: () {
+                // Copy the text to the clipboard
+                Clipboard.setData(ClipboardData(text: value));
+
+                // Optionally, show a confirmation message (e.g., a SnackBar)
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Text copied to clipboard!'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w600,
+                  color: theme.displayText,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndicatorRow(AppThemeData theme, CalculatorState state) {
+    final shiftColor = theme.shiftColor;
+    final alphaColor = theme.alphaColor;
+
+    return Row(
+      children: [
+        if (_uiMode == CalculatorUIMode.scientific) ...[
+          GestureDetector(
+            onTap: state.toggleShift,
+            child: Selector<CalculatorState, bool>(
+              selector: (_, s) => s.isShift,
+              builder: (_, v, _) => _animatedIndicator(
+                'S',
+                shiftColor(theme.background),
+                theme,
+                v,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: state.toggleAlpha,
+            child: Selector<CalculatorState, bool>(
+              selector: (_, s) => s.isAlpha,
+              builder: (_, v, _) => _animatedIndicator(
+                'A',
+                alphaColor(theme.background),
+                theme,
+                v,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: state.toggleHyp,
+            child: Selector<CalculatorState, bool>(
+              selector: (_, s) => s.isHyp,
+              builder: (_, v, _) =>
+                  _animatedIndicator('HYP', theme.primary, theme, v),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: state.toggleAngleMode,
+            child: Selector<CalculatorState, AngleMode>(
+              selector: (_, s) => s.angleMode,
+              builder: (_, mode, _) => _staticIndicator(
+                mode == AngleMode.radians ? 'RAD' : 'DEG',
+                theme.primary,
+                theme,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              state.clearShift();
+              state.clearAlpha();
+
+              _uiMode = _uiMode == CalculatorUIMode.scientific
+                  ? CalculatorUIMode.basic
+                  : CalculatorUIMode.scientific;
+            });
+          },
+          child: _staticIndicator(
+            _uiMode == CalculatorUIMode.basic ? 'BASIC' : 'SCI',
+            theme.primary,
+            theme,
           ),
         ),
 
-        // Keypad Section
-        Expanded(
-          child: Container(
-            color: theme.background,
-            child: GridView.count(
-              crossAxisCount: 5,
-              padding: const EdgeInsets.all(8),
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              childAspectRatio: 1.0,
-              children: _buildCalculatorButtons(
-                theme,
-                shiftColor,
-                alphaColor,
-                isShift,
-                isAlpha,
-                state,
-              ),
-            ),
-          ),
+        const Spacer(),
+        IconButton(
+          icon: Icon(Icons.apps, color: theme.muted, size: 22),
+          onPressed: () => _showModeMenu(context, state),
+          tooltip: "Mode Menu",
+          visualDensity: VisualDensity.compact,
+        ),
+        IconButton(
+          icon: Icon(Icons.palette_outlined, color: theme.muted, size: 22),
+          onPressed: () => _showThemeSettings(context),
+          tooltip: "Themes",
+          visualDensity: VisualDensity.compact,
         ),
       ],
     );
@@ -618,6 +670,34 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
         alphaColor: alphaColor(baseColor),
         onPressed: customOnTap ?? () => _handlePress(label, shift, alpha),
       );
+    }
+
+    if (_uiMode == CalculatorUIMode.basic) {
+      return [
+        btn('7', isNumber: true),
+        btn('8', isNumber: true),
+        btn('9', isNumber: true),
+        btn('DEL', isControl: true),
+        btn('AC', isControl: true),
+
+        btn('4', isNumber: true),
+        btn('5', isNumber: true),
+        btn('6', isNumber: true),
+        btn('×', isOperator: true),
+        btn('÷', isOperator: true),
+
+        btn('1', isNumber: true),
+        btn('2', isNumber: true),
+        btn('3', isNumber: true),
+        btn('+', isOperator: true),
+        btn('-', isOperator: true),
+
+        btn('0', isNumber: true),
+        btn('.', isNumber: true),
+        btn('(', isOperator: true),
+        btn(')', isOperator: true),
+        btn('=', isControl: true, customOnTap: () => state.evaluate()),
+      ];
     }
 
     return [

@@ -53,7 +53,7 @@ class _CalculatorHomeState extends State<CalculatorHome> {
         body: SafeArea(
           child: IndexedStack(index: _selectedIndex, children: _pages),
         ),
-        backgroundColor: theme.surface,
+        backgroundColor: theme.background,
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
             color: theme.surface,

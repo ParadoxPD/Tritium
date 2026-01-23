@@ -36,6 +36,11 @@ class _StatisticsPageState extends State<StatisticsPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        _unfocusInputs();
+      }
+    });
   }
 
   @override
@@ -554,5 +559,9 @@ class _StatisticsPageState extends State<StatisticsPage>
       return val.toStringAsExponential(6);
     }
     return val.toStringAsFixed(8).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
+  void _unfocusInputs() {
+    FocusScope.of(context).unfocus();
   }
 }

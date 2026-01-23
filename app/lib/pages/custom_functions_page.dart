@@ -52,6 +52,7 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
   }
 
   void _saveFunction() {
+    _unfocusInputs();
     final name = _nameController.text.trim();
     final formula = _formulaController.text.trim();
 
@@ -486,6 +487,10 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
     _formulaController.dispose();
     _paramController.dispose();
     super.dispose();
+  }
+
+  void _unfocusInputs() {
+    FocusScope.of(context).unfocus();
   }
 }
 

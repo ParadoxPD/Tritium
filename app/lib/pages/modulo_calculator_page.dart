@@ -20,6 +20,8 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
   String _error = '';
 
   void _calculate(String operation) {
+    _unfocusInputs();
+
     setState(() {
       _error = '';
       _result = '';
@@ -411,5 +413,9 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
     _bController.dispose();
     _modController.dispose();
     super.dispose();
+  }
+
+  void _unfocusInputs() {
+    FocusScope.of(context).unfocus();
   }
 }

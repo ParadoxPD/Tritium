@@ -40,6 +40,7 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
   }
 
   void _calculate(String operation) {
+    _unfocusInputs();
     setState(() {
       _operation = operation;
     });
@@ -422,5 +423,9 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
         ),
       ),
     );
+  }
+
+  void _unfocusInputs() {
+    FocusScope.of(context).unfocus();
   }
 }

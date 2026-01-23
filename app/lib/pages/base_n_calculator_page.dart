@@ -26,6 +26,7 @@ class _BaseNCalculatorPageState extends State<BaseNCalculatorPage> {
   };
 
   void _convert() {
+    _unfocusInputs();
     setState(() {
       _error = '';
       _result = '';
@@ -343,5 +344,9 @@ class _BaseNCalculatorPageState extends State<BaseNCalculatorPage> {
   void dispose() {
     _inputController.dispose();
     super.dispose();
+  }
+
+  void _unfocusInputs() {
+    FocusScope.of(context).unfocus();
   }
 }

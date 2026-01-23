@@ -294,6 +294,7 @@ class _EquationPageState extends State<EquationPage>
   }
 
   void _solvePolynomial() {
+    _unfocusInputs();
     if (_polyDegree == 2) {
       double a = double.tryParse(_polyCoeffs[0].text) ?? 0;
       double b = double.tryParse(_polyCoeffs[1].text) ?? 0;
@@ -532,6 +533,7 @@ class _EquationPageState extends State<EquationPage>
   }
 
   void _solveSystem() {
+    _unfocusInputs();
     if (_sysUnknowns == 2) {
       double a1 = double.tryParse(_sysCoeffs[0][0].text) ?? 0;
       double b1 = double.tryParse(_sysCoeffs[0][1].text) ?? 0;
@@ -609,5 +611,9 @@ class _EquationPageState extends State<EquationPage>
       return val.toStringAsExponential(6);
     }
     return val.toStringAsFixed(8).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
+  void _unfocusInputs() {
+    FocusScope.of(context).unfocus();
   }
 }

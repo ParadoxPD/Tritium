@@ -6,9 +6,12 @@
       "2": [
         "flutter emulators --launch pixel_brokeaf",
         "cd app",
-        "flutter run -d emulator-5554"
+        "sleep 2",
+        "tmux split-window -h",
+        "flutter run -d emulator-5554",
+        "flutter run -d 33011JEHN1008"
       ],
-      "3": ["cd app", "flutter run -d 33011JEHN1008"],
+      "3": ["cd app"],
       "4": ["cd app"],
       "5": []
     }

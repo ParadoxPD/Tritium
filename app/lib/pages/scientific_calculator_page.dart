@@ -11,8 +11,6 @@ import '../theme/theme_provider.dart';
 import 'equation_page.dart';
 import 'statistics_page.dart';
 
-enum CalculatorUIMode { scientific, basic }
-
 class ScientificCalculatorPage extends StatefulWidget {
   const ScientificCalculatorPage({super.key});
 
@@ -24,7 +22,6 @@ class ScientificCalculatorPage extends StatefulWidget {
 class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
   // Keep focus node to ensure cursor stays visible/blinking
   final FocusNode _inputFocusNode = FocusNode();
-  CalculatorUIMode _uiMode = CalculatorUIMode.scientific;
 
   @override
   void dispose() {
@@ -269,60 +266,93 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
     final themeProvider = context.watch<ThemeProvider>();
     final theme = themeProvider.currentTheme;
 
-    return Column(
-      children: [
-        // Display Section
-        _buildDisplaySection(theme, state),
-        // Keypad Section
-        _buildKeypadSection(theme, state),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Display Section
+            Expanded(child: _buildDisplaySection(theme, state)),
+            // Keypad Section
+            _buildKeypadSection(
+              theme,
+              state,
+              constraints.maxHeight,
+              constraints.maxWidth,
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildKeypadSection(AppThemeData theme, CalculatorState state) {
-    final shiftColor = theme.shiftColor;
-    final alphaColor = theme.alphaColor;
-    final isShift = state.isShift;
-    final isAlpha = state.isAlpha;
-    return Expanded(
-      // 1. Take up all remaining space in the Column
-      child: Align(
-        alignment: Alignment.bottomCenter, // 2. Keep the keypad at the bottom
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          child: SizedBox(
-            // 3. 'null' tells it to be as small as possible (wrap content)
-            //    'double.infinity' tells it to take all available space
-            height: _uiMode == CalculatorUIMode.basic ? null : double.infinity,
-            child: Container(
-              color: theme.background,
-              child: GridView.count(
-                crossAxisCount: 5,
-                padding: const EdgeInsets.all(8),
-                mainAxisSpacing: 6,
-                crossAxisSpacing: 6,
-                childAspectRatio: 1.0,
-                // 4. Required for "max needed height" to work
-                shrinkWrap: _uiMode == CalculatorUIMode.basic,
-                // 5. Disable scrolling in basic mode so it doesn't fight the height
-                physics: _uiMode == CalculatorUIMode.basic
-                    ? const NeverScrollableScrollPhysics()
-                    : const BouncingScrollPhysics(),
-                children: _buildCalculatorButtons(
-                  theme,
-                  shiftColor,
-                  alphaColor,
-                  isShift,
-                  isAlpha,
-                  state,
-                ),
-              ),
-            ),
-          ),
+  Widget _buildKeypadSection(
+    AppThemeData theme,
+    CalculatorState state,
+    double maxAvailable,
+    double maxWidth,
+  ) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOutCubic, // Smoother transition for height
+      // If Scientific, take ~65% of screen. If Basic, take calculated height.
+      height: _keypadHeight(state.uiMode, maxAvailable, maxWidth),
+
+      color: theme.background,
+      child: GridView.count(
+        // Use a unique key for each mode to reset scroll position on toggle
+        key: ValueKey(state.uiMode),
+        crossAxisCount: 5,
+        padding: const EdgeInsets.all(8),
+        mainAxisSpacing: 6,
+        crossAxisSpacing: 6,
+        childAspectRatio: 1.0,
+        // Keep your physics as requested
+        physics: state.uiMode == CalculatorUIMode.basic
+            ? const NeverScrollableScrollPhysics()
+            : const BouncingScrollPhysics(),
+        children: _buildCalculatorButtons(
+          theme,
+          theme.shiftColor,
+          theme.alphaColor,
+          state.isShift,
+          state.isAlpha,
+          state,
         ),
       ),
     );
+  }
+
+  double _keypadHeight(
+    CalculatorUIMode mode,
+    double maxAvailable,
+    double maxWidth,
+  ) {
+    // --- SCIENTIFIC MODE ---
+    if (mode == CalculatorUIMode.scientific) {
+      // Reserve space for the display so it doesn't get crushed.
+      // 180.0 is roughly the height of your display's padding + text.
+      const double minDisplayHeight = 200.0;
+
+      // The keypad takes whatever is left
+      final double result = maxAvailable - minDisplayHeight;
+
+      // Safety check: ensure we don't return a negative number if screen is tiny
+      return result.clamp(0.0, maxAvailable);
+    }
+
+    // --- BASIC MODE ---
+    const int columns = 5;
+    const int rows = 5;
+    const double spacing = 6.0;
+    const double padding = 16.0;
+
+    final double buttonSize =
+        (maxWidth - padding - (spacing * (columns - 1))) / columns;
+    final double desiredHeight =
+        (rows * buttonSize) + ((rows - 1) * spacing) + 16.0;
+
+    return desiredHeight.clamp(0.0, maxAvailable);
   }
 
   Widget _buildDisplaySection(AppThemeData theme, CalculatorState state) {
@@ -373,13 +403,19 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
                   ),
                 );
               },
-              child: Text(
-                value,
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w600,
-                  color: theme.displayText,
-                  letterSpacing: 0.5,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: BouncingScrollPhysics(),
+                child: Text(
+                  maxLines: 1,
+                  overflow: TextOverflow.fade,
+                  value,
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w600,
+                    color: theme.displayText,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
             ),
@@ -395,68 +431,77 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
 
     return Row(
       children: [
-        if (_uiMode == CalculatorUIMode.scientific) ...[
-          GestureDetector(
-            onTap: state.toggleShift,
-            child: Selector<CalculatorState, bool>(
-              selector: (_, s) => s.isShift,
-              builder: (_, v, _) => _animatedIndicator(
-                'S',
-                shiftColor(theme.background),
-                theme,
-                v,
-              ),
-            ),
-          ),
-          GestureDetector(
-            onTap: state.toggleAlpha,
-            child: Selector<CalculatorState, bool>(
-              selector: (_, s) => s.isAlpha,
-              builder: (_, v, _) => _animatedIndicator(
-                'A',
-                alphaColor(theme.background),
-                theme,
-                v,
-              ),
-            ),
-          ),
-          GestureDetector(
-            onTap: state.toggleHyp,
-            child: Selector<CalculatorState, bool>(
-              selector: (_, s) => s.isHyp,
-              builder: (_, v, _) =>
-                  _animatedIndicator('HYP', theme.primary, theme, v),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: state.toggleAngleMode,
-            child: Selector<CalculatorState, AngleMode>(
-              selector: (_, s) => s.angleMode,
-              builder: (_, mode, _) => _staticIndicator(
-                mode == AngleMode.radians ? 'RAD' : 'DEG',
-                theme.primary,
-                theme,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              state.clearShift();
-              state.clearAlpha();
+        // Wraps the scientific buttons in an animation
+        AnimatedSize(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.fastOutSlowIn, // A nice "snap" effect
+          alignment:
+              Alignment.centerLeft, // Ensures it collapses toward the left
+          child: state.uiMode == CalculatorUIMode.scientific
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: state.toggleShift,
+                      child: Selector<CalculatorState, bool>(
+                        selector: (_, s) => s.isShift,
+                        builder: (_, v, _) => _animatedIndicator(
+                          'S',
+                          shiftColor(theme.background),
+                          theme,
+                          v,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: state.toggleAlpha,
+                      child: Selector<CalculatorState, bool>(
+                        selector: (_, s) => s.isAlpha,
+                        builder: (_, v, _) => _animatedIndicator(
+                          'A',
+                          alphaColor(theme.background),
+                          theme,
+                          v,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: state.toggleHyp,
+                      child: Selector<CalculatorState, bool>(
+                        selector: (_, s) => s.isHyp,
+                        builder: (_, v, _) =>
+                            _animatedIndicator('HYP', theme.primary, theme, v),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: state.toggleAngleMode,
+                      child: Selector<CalculatorState, AngleMode>(
+                        selector: (_, s) => s.angleMode,
+                        builder: (_, mode, _) => _staticIndicator(
+                          mode == AngleMode.radians ? 'RAD' : 'DEG',
+                          theme.primary,
+                          theme,
+                        ),
+                      ),
+                    ),
+                    // This spacing also collapses when switching modes
+                    const SizedBox(width: 8),
+                  ],
+                )
+              : const SizedBox.shrink(), // Occupies 0 width in Basic mode
+        ),
 
-              _uiMode = _uiMode == CalculatorUIMode.scientific
-                  ? CalculatorUIMode.basic
-                  : CalculatorUIMode.scientific;
-            });
-          },
-          child: _staticIndicator(
-            _uiMode == CalculatorUIMode.basic ? 'BASIC' : 'SCI',
-            theme.primary,
-            theme,
+        // The rest of your Row remains the same; it will slide left automatically
+        GestureDetector(
+          onTap: state.toggleUiMode,
+          child: Selector<CalculatorState, CalculatorUIMode>(
+            selector: (_, s) => s.uiMode,
+            builder: (_, mode, _) => _staticIndicator(
+              mode == CalculatorUIMode.basic ? 'BASIC' : 'SCI',
+              theme.primary,
+              theme,
+            ),
           ),
         ),
 
@@ -475,9 +520,8 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
         ),
       ],
     );
-  }
+  } // New Editor Display using TextField
 
-  // New Editor Display using TextField
   Widget _buildEditorDisplay(AppThemeData theme, CalculatorState state) {
     return SizedBox(
       height: 36, // Fixed height for one line
@@ -672,30 +716,47 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       );
     }
 
-    if (_uiMode == CalculatorUIMode.basic) {
+    if (state.uiMode == CalculatorUIMode.basic) {
       return [
+        //Row 1
+        btn('No cLue', isFunction: true),
+        btn('^', isOperator: true),
+        btn('√', isOperator: true),
+        btn('(', isOperator: true),
+        btn(')', isOperator: true),
+
+        //Row 2
         btn('7', isNumber: true),
         btn('8', isNumber: true),
         btn('9', isNumber: true),
         btn('DEL', isControl: true),
         btn('AC', isControl: true),
 
+        //Row 3
         btn('4', isNumber: true),
         btn('5', isNumber: true),
         btn('6', isNumber: true),
         btn('×', isOperator: true),
         btn('÷', isOperator: true),
 
+        //Row 4
         btn('1', isNumber: true),
         btn('2', isNumber: true),
         btn('3', isNumber: true),
         btn('+', isOperator: true),
         btn('-', isOperator: true),
 
+        //Row 5
         btn('0', isNumber: true),
         btn('.', isNumber: true),
-        btn('(', isOperator: true),
-        btn(')', isOperator: true),
+        btn(
+          'Crash',
+          isFunction: true,
+          customOnTap: () {
+            SystemNavigator.pop();
+          },
+        ),
+        btn('Ans', isOperator: true),
         btn('=', isControl: true, customOnTap: () => state.evaluate()),
       ];
     }

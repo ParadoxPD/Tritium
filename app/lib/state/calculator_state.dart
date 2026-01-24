@@ -2,25 +2,36 @@ import 'package:app/core/engine.dart';
 import 'package:app/core/engine_result.dart';
 import 'package:app/core/eval_context.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum CalculatorUIMode { scientific, basic }
 
 class CalculatorState extends ChangeNotifier {
   final EvaluationEngine _engine;
   final TextEditingController controller = TextEditingController();
   final ScrollController textScrollController = ScrollController();
 
-  EvalContext _context;
+  CalculatorUIMode _uiMode = CalculatorUIMode.scientific;
+
+  static const _keyUiMode = "ui_mode";
+  static const _keyAngleMode = "angle_mode";
+
+  EvalContext _context = const EvalContext();
   String _display = '0';
   bool isShift = false;
   bool isAlpha = false;
   bool isHyp = false;
 
-  CalculatorState(this._engine) : _context = const EvalContext();
-
+  CalculatorState(this._engine) {
+    _loadSettings();
+  }
   String get display => _display;
   AngleMode get angleMode => _context.angleMode;
+  CalculatorUIMode get uiMode => _uiMode;
 
   void setAngleMode(AngleMode mode) {
     _context = _context.copyWith(angleMode: mode);
+    saveSettings();
     notifyListeners();
   }
 
@@ -30,6 +41,18 @@ class CalculatorState extends ChangeNotifier {
           ? AngleMode.degrees
           : AngleMode.radians,
     );
+  }
+
+  void toggleUiMode() {
+    clearHyp();
+    clearAlpha();
+    clearShift();
+    clear();
+    _uiMode = _uiMode == CalculatorUIMode.scientific
+        ? CalculatorUIMode.basic
+        : CalculatorUIMode.scientific;
+    saveSettings();
+    notifyListeners();
   }
 
   void handleButtonPress({
@@ -75,6 +98,9 @@ class CalculatorState extends ChangeNotifier {
     token = switch (token) {
       "³√" => "3√",
       "ⁿ√" => "√",
+      "x²" => "^2",
+      "x³" => "^3",
+      "xⁿ" => "^",
       _ => token,
     };
     final cursorPos = controller.selection.base.offset;
@@ -165,6 +191,34 @@ class CalculatorState extends ChangeNotifier {
 
   void clearHyp() {
     isHyp = false;
+    notifyListeners();
+  }
+
+  void saveSettings() async {
+    print("saving settings");
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyAngleMode, _context.angleMode.name);
+    await prefs.setString(_keyUiMode, _uiMode.name);
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Load UI Mode
+    final savedUiMode = prefs.getString(_keyUiMode);
+    if (savedUiMode != null) {
+      _uiMode = CalculatorUIMode.values.firstWhere(
+        (e) => e.name == savedUiMode,
+      );
+    }
+
+    // Load Angle Mode
+    final savedAngle = prefs.getString(_keyAngleMode);
+    if (savedAngle != null) {
+      final mode = AngleMode.values.firstWhere((e) => e.name == savedAngle);
+      _context = _context.copyWith(angleMode: mode);
+    }
+
     notifyListeners();
   }
 

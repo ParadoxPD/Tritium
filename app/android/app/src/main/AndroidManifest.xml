@@ -31,31 +31,31 @@
             android:name="flutterEmbedding"
             android:value="2" />
            <receiver
-                android:name=".TritiumWidgetLight"
-                android:exported="true"
-                android:label="Tritium Light">
-                <intent-filter>
-                    <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                    <action android:name="BUTTON_CLICK" />
-                </intent-filter>
-                <meta-data
-                    android:name="android.appwidget.provider"
-                    android:resource="@xml/tritium_widget_light" />
-            </receiver>
+            android:name=".TritiumWidgetLight"
+            android:exported="true"
+            android:label="Tritium Light">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="BUTTON_CLICK" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tritium_widget_light" />
+        </receiver>
 
-            <!-- Dark Theme Widget -->
-            <receiver
-                android:name=".TritiumWidgetDark"
-                android:exported="true"
-                android:label="Tritium Dark">
-                <intent-filter>
-                    <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                    <action android:name="BUTTON_CLICK" />
-                </intent-filter>
-                <meta-data
-                    android:name="android.appwidget.provider"
-                    android:resource="@xml/tritium_widget_dark" />
-            </receiver>
+        <!-- Dark Theme Widget -->
+        <receiver
+            android:name=".TritiumWidgetDark"
+            android:exported="true"
+            android:label="Tritium Dark">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="BUTTON_CLICK" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tritium_widget_dark" />
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

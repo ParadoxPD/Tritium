@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- File: android/app/src/main/res/layout/tritium_widget_light.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:background="@android:color/transparent">
+
+    <!-- Display Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:gravity="end">
+
+        <TextView
+            android:id="@+id/input_display"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:textSize="16sp"
+            android:fontFamily="monospace"
+            android:textColor="#000000"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/result_display"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
+
+    <!-- Calculator Grid -->
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:columnCount="5"
+        android:rowCount="5"
+        android:alignmentMode="alignBounds"
+        android:columnOrderPreserved="false">
+
+        <!-- Row 1 -->
+        <Button android:id="@+id/btn_placeholder" style="@style/WidgetButtonLight" android:text="" />
+        <Button android:id="@+id/btn_power" style="@style/WidgetButtonLight" android:text="^" />
+        <Button android:id="@+id/btn_sqrt" style="@style/WidgetButtonLight" android:text="√" />
+        <Button android:id="@+id/btn_lparen" style="@style/WidgetButtonLight" android:text="(" />
+        <Button android:id="@+id/btn_rparen" style="@style/WidgetButtonLight" android:text=")" />
+
+        <!-- Row 2 -->
+        <Button android:id="@+id/btn_7" style="@style/WidgetButtonLight" android:text="7" />
+        <Button android:id="@+id/btn_8" style="@style/WidgetButtonLight" android:text="8" />
+        <Button android:id="@+id/btn_9" style="@style/WidgetButtonLight" android:text="9" />
+        <Button android:id="@+id/btn_del" style="@style/WidgetButtonLight" android:text="DEL" android:textSize="12sp" />
+        <Button android:id="@+id/btn_ac" style="@style/WidgetButtonLight" android:text="AC" android:textSize="12sp" />
+
+        <!-- Row 3 -->
+        <Button android:id="@+id/btn_4" style="@style/WidgetButtonLight" android:text="4" />
+        <Button android:id="@+id/btn_5" style="@style/WidgetButtonLight" android:text="5" />
+        <Button android:id="@+id/btn_6" style="@style/WidgetButtonLight" android:text="6" />
+        <Button android:id="@+id/btn_multiply" style="@style/WidgetButtonLight" android:text="×" />
+        <Button android:id="@+id/btn_divide" style="@style/WidgetButtonLight" android:text="÷" />
+
+        <!-- Row 4 -->
+        <Button android:id="@+id/btn_1" style="@style/WidgetButtonLight" android:text="1" />
+        <Button android:id="@+id/btn_2" style="@style/WidgetButtonLight" android:text="2" />
+        <Button android:id="@+id/btn_3" style="@style/WidgetButtonLight" android:text="3" />
+        <Button android:id="@+id/btn_add" style="@style/WidgetButtonLight" android:text="+" />
+        <Button android:id="@+id/btn_subtract" style="@style/WidgetButtonLight" android:text="-" />
+
+        <!-- Row 5 -->
+        <Button android:id="@+id/btn_0" style="@style/WidgetButtonLight" android:text="0" />
+        <Button android:id="@+id/btn_dot" style="@style/WidgetButtonLight" android:text="." />
+        <Button android:id="@+id/btn_placeholder2" style="@style/WidgetButtonLight" android:text="" />
+        <Button android:id="@+id/btn_ans" style="@style/WidgetButtonLight" android:text="Ans" android:textSize="12sp" />
+        <Button android:id="@+id/btn_equals" style="@style/WidgetButtonLight" android:text="=" />
+    </GridLayout>
+</LinearLayout>

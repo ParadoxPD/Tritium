@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Tritium</string>
+    <string name="widget_light_description">Tritium Light - Calculator with black text</string>
+    <string name="widget_dark_description">Tritium Dark - Calculator with white text</string>
+</resources>

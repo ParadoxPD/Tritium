@@ -22,17 +22,23 @@ class NumberValue extends Value {
   final double value;
   const NumberValue(this.value);
 
+  static const double _maxExactInt = 9e15;
+
   @override
   String toDisplayString() {
     if (value.isNaN) return 'NaN';
     if (value.isInfinite) return value.isNegative ? '-∞' : '∞';
 
-    // Integer check (safe for doubles)
-    if (value % 1 == 0) {
+    final abs = value.abs();
+    if (abs >= 1e12 || (abs > 0 && abs < 1e-6)) {
+      return value.toStringAsExponential(6);
+    }
+
+    if (value % 1 == 0 && abs < _maxExactInt) {
       return value.toInt().toString();
     }
 
-    // Trim floating-point noise
+    // Normal decimal
     return value.toStringAsPrecision(12).replaceFirst(RegExp(r'\.?0+$'), '');
   }
 

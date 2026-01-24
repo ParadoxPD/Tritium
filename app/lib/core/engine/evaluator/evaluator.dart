@@ -17,6 +17,10 @@ class Evaluator {
 
   EvalContext? _currentContext;
 
+  Evaluator() {
+    _variables['Ans'] = NumberValue(0);
+  }
+
   Value evaluate(BoundNode node, [EvalContext? context]) {
     _currentContext = context;
 

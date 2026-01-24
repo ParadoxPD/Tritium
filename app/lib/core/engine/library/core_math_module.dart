@@ -43,10 +43,11 @@ class CoreMathModule extends LibraryModule {
     'abs': NativeFunction(1, (args) {
       final val = args[0];
       if (val is NumberValue) return NumberValue(val.value.abs());
-      if (val is ComplexValue)
+      if (val is ComplexValue) {
         return NumberValue(
           math.sqrt(val.real * val.real + val.imaginary * val.imaginary),
         );
+      }
       return val;
     }),
   };

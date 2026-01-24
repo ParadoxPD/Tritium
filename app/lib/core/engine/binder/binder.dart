@@ -36,6 +36,8 @@ class Binder {
       scope.define(name, ValueType.function, isConstant: true);
     });
 
+    scope.define('Ans', ValueType.any);
+
     return scope;
   }
 

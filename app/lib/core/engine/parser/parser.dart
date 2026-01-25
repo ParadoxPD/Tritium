@@ -1,8 +1,3 @@
-// ============================================================================
-// FILE: core/engine/parser/parser.dart
-// Converts List<Token> → AST (recursive descent parser)
-// ============================================================================
-
 import 'package:app/core/engine/parser/ast.dart';
 import 'package:app/core/engine/parser/token.dart';
 import 'package:app/core/engine_result.dart';
@@ -263,34 +258,87 @@ class Parser {
   }
 
   Expression _matrixOrVector() {
-    final rows = <List<Expression>>[];
-    var currentRow = <Expression>[];
+    final startPos = _previous().position;
 
+    // Empty bracket case: []
     if (_peek().type == TokenType.rightBracket) {
       _advance();
-      return VectorLiteral([], _previous().position);
+      return VectorLiteral([], startPos);
     }
+
+    // Check if this is a nested bracket syntax (matrix) or flat syntax (vector/matrix)
+    // If the first element is a '[', it's nested bracket syntax: [[1,2],[3,4]]
+    if (_check(TokenType.leftBracket)) {
+      return _parseNestedBracketMatrix(startPos);
+    }
+
+    // Otherwise, it's either a vector [1,2,3] or semicolon matrix [1,2; 3,4]
+    return _parseFlatBracketSyntax(startPos);
+  }
+
+  /// Parse nested bracket matrix syntax: [[1,2],[3,4]]
+  Expression _parseNestedBracketMatrix(int startPos) {
+    final rows = <List<Expression>>[];
+
+    do {
+      // Expect a '[' for each row
+      _consume(TokenType.leftBracket, 'Expected [ for matrix row');
+
+      final rowElements = <Expression>[];
+
+      // Parse elements in this row
+      if (!_check(TokenType.rightBracket)) {
+        do {
+          rowElements.add(_expression());
+        } while (_match(TokenType.comma));
+      }
+
+      _consume(TokenType.rightBracket, 'Expected ] to close matrix row');
+      rows.add(rowElements);
+    } while (_match(TokenType.comma));
+
+    _consume(TokenType.rightBracket, 'Expected ] to close matrix');
+
+    // If only one row, it's still a matrix (not a vector) since it used nested syntax
+    if (rows.isEmpty) {
+      return MatrixLiteral([], startPos);
+    }
+
+    return MatrixLiteral(rows, startPos);
+  }
+
+  /// Parse flat bracket syntax: [1,2,3] or [1,2; 3,4]
+  Expression _parseFlatBracketSyntax(int startPos) {
+    final rows = <List<Expression>>[];
+    var currentRow = <Expression>[];
 
     do {
       currentRow.add(_expression());
 
       if (_match(TokenType.semicolon)) {
+        // Semicolon indicates a new row
         rows.add(currentRow);
         currentRow = <Expression>[];
       } else if (_match(TokenType.comma)) {
+        // Comma continues the current row
         continue;
       }
     } while (!_check(TokenType.rightBracket));
 
     _consume(TokenType.rightBracket, 'Expected ]');
 
-    if (currentRow.isNotEmpty) rows.add(currentRow);
+    // Add the last row if it has elements
+    if (currentRow.isNotEmpty) {
+      rows.add(currentRow);
+    }
 
-    // Determine if matrix or vector
+    // Determine if it's a matrix or vector
     if (rows.length == 1) {
-      return VectorLiteral(rows[0], rows[0][0].position);
+      // Single row = vector
+      return VectorLiteral(rows[0], startPos);
     } else {
-      return MatrixLiteral(rows, rows[0][0].position);
+      // Multiple rows = matrix
+      return MatrixLiteral(rows, startPos);
     }
   }
 

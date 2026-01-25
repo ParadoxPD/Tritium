@@ -7,9 +7,9 @@
         "flutter emulators --launch pixel_brokeaf",
         "cd app",
         "sleep 2",
-        "tmux split-window -h",
-        "flutter run -d emulator-5554",
-        "flutter run -d 33011JEHN1008"
+        "tmux split-window -h -t \"Tritium\":2",
+        "tmux send-keys -t \"Tritium\":2.2 'flutter run -d 33011JEHN1008' C-m",
+        "flutter run -d emulator-5554"
       ],
       "3": ["cd app"],
       "4": ["cd app"],

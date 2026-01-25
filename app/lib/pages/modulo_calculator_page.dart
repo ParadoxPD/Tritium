@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../utils/modulo_operations.dart';
 import '../widgets/app_page.dart';
 import '../theme/theme_provider.dart';
+import '../state/modulo_calculator_state.dart';
 
 class ModuloCalculatorPage extends StatefulWidget {
   const ModuloCalculatorPage({Key? key}) : super(key: key);
@@ -12,104 +12,84 @@ class ModuloCalculatorPage extends StatefulWidget {
 }
 
 class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
-  final TextEditingController _aController = TextEditingController();
-  final TextEditingController _bController = TextEditingController();
-  final TextEditingController _modController = TextEditingController();
-  String _result = '';
-  String _operation = '';
-  String _error = '';
-
-  void _calculate(String operation) {
-    _unfocusInputs();
-
-    setState(() {
-      _error = '';
-      _result = '';
-      _operation = operation;
-    });
-
-    try {
-      final a = int.parse(_aController.text);
-      final b = int.parse(_bController.text);
-      final mod = int.parse(_modController.text);
-
-      int result;
-      switch (operation) {
-        case 'add':
-          result = ModuloOperations.add(a, b, mod);
-          break;
-        case 'sub':
-          result = ModuloOperations.subtract(a, b, mod);
-          break;
-        case 'mul':
-          result = ModuloOperations.multiply(a, b, mod);
-          break;
-        case 'pow':
-          result = ModuloOperations.power(a, b, mod);
-          break;
-        case 'inv':
-          result = ModuloOperations.inverse(a, mod);
-          break;
-        default:
-          result = 0;
-      }
-
-      setState(() {
-        _result = result.toString();
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString().replaceAll('Exception: ', '');
-        _result = '';
-      });
-    }
-  }
+  static const List<int> modulusOptions = [
+    2,
+    3,
+    5,
+    7,
+    11,
+    13,
+    17,
+    19,
+    23,
+    29,
+    31,
+    37,
+    41,
+    43,
+    47,
+  ];
 
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().currentTheme;
+    final state = context.watch<ModuloCalculatorState>();
 
     return AppPage(
       title: 'Modular Arithmetic',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Input Fields
+          // Modulus Selector
           ThemedCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
+                Icon(Icons.percent, color: theme.primary, size: 20),
+                const SizedBox(width: 8),
                 Text(
-                  'Inputs',
+                  'Modulus:',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: theme.primary,
                   ),
                 ),
-                const SizedBox(height: 16),
-                _buildNumberInput(
-                  'Number A',
-                  _aController,
-                  'First operand',
-                  Icons.looks_one,
-                  theme,
-                ),
-                const SizedBox(height: 12),
-                _buildNumberInput(
-                  'Number B',
-                  _bController,
-                  'Second operand (or exponent)',
-                  Icons.looks_two,
-                  theme,
-                ),
-                const SizedBox(height: 12),
-                _buildNumberInput(
-                  'Modulo M',
-                  _modController,
-                  'Modulus value',
-                  Icons.percent,
-                  theme,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.panel,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: theme.subtle),
+                    ),
+                    child: DropdownButton<int>(
+                      value: state.modulus,
+                      underline: const SizedBox(),
+                      isExpanded: true,
+                      dropdownColor: theme.panel,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: theme.foreground,
+                      ),
+                      items: modulusOptions.map((mod) {
+                        return DropdownMenuItem(
+                          value: mod,
+                          child: Text(
+                            'mod $mod',
+                            style: TextStyle(color: theme.foreground),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) state.setModulus(value);
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -117,13 +97,205 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
 
           const SizedBox(height: 16),
 
-          // Operations
+          // Display
+          ThemedCard(
+            color: theme.panel,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Expression display
+                if (state.expression.isNotEmpty)
+                  Text(
+                    state.expression,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: theme.muted,
+                      fontFamily: 'monospace',
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                const SizedBox(height: 8),
+                // Main display
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.background,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: theme.subtle),
+                  ),
+                  child: SelectableText(
+                    state.display,
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'monospace',
+                      color: theme.foreground,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Calculator Buttons
+          ThemedCard(
+            child: Column(
+              children: [
+                // First row - Special operations
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildButton(
+                        'AC',
+                        () => state.clear(),
+                        theme.error,
+                        theme,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        '⌫',
+                        () => state.backspace(),
+                        theme.warning,
+                        theme,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        'mod',
+                        () => state.reduceModulo(),
+                        theme.accent,
+                        theme,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        '÷',
+                        () => state.performOperation(ModuloOperation.divide),
+                        theme.primary,
+                        theme,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Second row - 7, 8, 9, ×
+                Row(
+                  children: [
+                    Expanded(child: _buildNumberButton('7', state, theme)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildNumberButton('8', state, theme)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildNumberButton('9', state, theme)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        '×',
+                        () => state.performOperation(ModuloOperation.multiply),
+                        theme.primary,
+                        theme,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Third row - 4, 5, 6, −
+                Row(
+                  children: [
+                    Expanded(child: _buildNumberButton('4', state, theme)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildNumberButton('5', state, theme)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildNumberButton('6', state, theme)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        '−',
+                        () => state.performOperation(ModuloOperation.subtract),
+                        theme.primary,
+                        theme,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Fourth row - 1, 2, 3, +
+                Row(
+                  children: [
+                    Expanded(child: _buildNumberButton('1', state, theme)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildNumberButton('2', state, theme)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildNumberButton('3', state, theme)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        '+',
+                        () => state.performOperation(ModuloOperation.add),
+                        theme.primary,
+                        theme,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Fifth row - ±, 0, ., =
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildButton(
+                        '±',
+                        () => state.toggleSign(),
+                        theme.secondary,
+                        theme,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildNumberButton('0', state, theme)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        '^',
+                        () => state.performOperation(ModuloOperation.power),
+                        theme.accent,
+                        theme,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildButton(
+                        '=',
+                        () => state.equals(),
+                        theme.success,
+                        theme,
+                        fontSize: 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Advanced Operations
           ThemedCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Operations',
+                  'Advanced Operations',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -135,39 +307,32 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _buildOperationButton(
-                      '(A + B) mod M',
-                      'add',
-                      Icons.add,
-                      theme.success,
+                    _buildAdvancedButton(
+                      'a⁻¹ mod m',
+                      Icons.flip,
+                      () => state.calculateModularInverse(),
+                      theme.secondary,
                       theme,
                     ),
-                    _buildOperationButton(
-                      '(A − B) mod M',
-                      'sub',
-                      Icons.remove,
-                      theme.warning,
-                      theme,
-                    ),
-                    _buildOperationButton(
-                      '(A × B) mod M',
-                      'mul',
-                      Icons.close,
-                      theme.primary,
-                      theme,
-                    ),
-                    _buildOperationButton(
-                      'A^B mod M',
-                      'pow',
-                      Icons.functions,
+                    _buildAdvancedButton(
+                      'GCD',
+                      Icons.calculate,
+                      () => state.calculateGCD(),
                       theme.accent,
                       theme,
                     ),
-                    _buildOperationButton(
-                      'A^(-1) mod M',
-                      'inv',
-                      Icons.swap_horiz,
-                      theme.secondary,
+                    _buildAdvancedButton(
+                      'LCM',
+                      Icons.functions,
+                      () => state.calculateLCM(),
+                      theme.warning,
+                      theme,
+                    ),
+                    _buildAdvancedButton(
+                      'Ext GCD',
+                      Icons.scatter_plot,
+                      () => state.calculateExtendedGCD(),
+                      theme.error,
                       theme,
                     ),
                   ],
@@ -178,8 +343,8 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
 
           const SizedBox(height: 16),
 
-          // Result or Error
-          if (_error.isNotEmpty)
+          // Error Display
+          if (state.error != null)
             ThemedCard(
               color: theme.error.withOpacity(0.1),
               child: Row(
@@ -200,7 +365,7 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _error,
+                          state.error!,
                           style: TextStyle(fontSize: 14, color: theme.error),
                         ),
                       ],
@@ -210,7 +375,8 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
               ),
             ),
 
-          if (_result.isNotEmpty)
+          // Result Display
+          if (state.result != null)
             ThemedCard(
               color: theme.success.withOpacity(0.1),
               child: Column(
@@ -233,34 +399,63 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
                   const SizedBox(height: 12),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: theme.panel,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: theme.success, width: 2),
                     ),
                     child: SelectableText(
-                      _result,
+                      state.result!,
                       style: TextStyle(
-                        fontSize: 42,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
                         fontFamily: 'monospace',
                         color: theme.foreground,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
+                ],
+              ),
+            ),
+
+          // Message Display (for extended GCD, etc.)
+          if (state.message != null)
+            ThemedCard(
+              color: theme.accent.withOpacity(0.1),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, color: theme.accent),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Result',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.accent,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: theme.panel,
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: theme.accent, width: 2),
                     ),
-                    child: Text(
-                      _getOperationDescription(),
-                      style: TextStyle(fontSize: 14, color: theme.muted),
-                      textAlign: TextAlign.center,
+                    child: SelectableText(
+                      state.message!,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: 'monospace',
+                        color: theme.foreground,
+                      ),
                     ),
                   ),
                 ],
@@ -276,7 +471,11 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.info_outline, color: theme.primary, size: 20),
+                    Icon(
+                      Icons.lightbulb_outline,
+                      color: theme.primary,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'About Modular Arithmetic',
@@ -290,7 +489,10 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Modular arithmetic is a system where numbers "wrap around" upon reaching a certain value (the modulus). It\'s used in cryptography, computer science, and number theory.',
+                  'Modular arithmetic is a system where numbers "wrap around" upon reaching the modulus. '
+                  'It\'s fundamental in cryptography, computer science, and number theory. '
+                  'Use this calculator to perform operations in modular arithmetic, including '
+                  'modular inverse, GCD, LCM, and extended GCD calculations.',
                   style: TextStyle(
                     fontSize: 12,
                     color: theme.muted,
@@ -305,63 +507,80 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
     );
   }
 
-  Widget _buildNumberInput(
+  Widget _buildButton(
     String label,
-    TextEditingController controller,
-    String hint,
-    IconData icon,
-    dynamic theme,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
+    VoidCallback onTap,
+    Color color,
+    dynamic theme, {
+    double fontSize = 20,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: theme.panel,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: theme.subtle),
+        ),
+        child: Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: theme.foreground,
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          style: TextStyle(
-            fontSize: 18,
+            fontSize: fontSize,
             fontWeight: FontWeight.bold,
-            color: theme.foreground,
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: Icon(icon, color: theme.primary),
+            color: color,
           ),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildOperationButton(
+  Widget _buildNumberButton(
+    String digit,
+    ModuloCalculatorState state,
+    dynamic theme,
+  ) {
+    return InkWell(
+      onTap: () => state.appendDigit(digit),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: theme.panel,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: theme.subtle),
+        ),
+        child: Text(
+          digit,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: theme.foreground,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdvancedButton(
     String label,
-    String op,
     IconData icon,
+    VoidCallback onTap,
     Color color,
     dynamic theme,
   ) {
-    final isSelected = _operation == op && _result.isNotEmpty;
-
     return InkWell(
-      onTap: () => _calculate(op),
+      onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.2) : theme.panel,
+          color: theme.panel,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? color : theme.subtle,
-            width: isSelected ? 2 : 1,
-          ),
+          border: Border.all(color: theme.subtle),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -372,7 +591,7 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
               label,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: FontWeight.bold,
                 color: theme.foreground,
               ),
             ),
@@ -380,42 +599,5 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
         ),
       ),
     );
-  }
-
-  String _getOperationDescription() {
-    if (_aController.text.isEmpty || _modController.text.isEmpty) {
-      return '';
-    }
-
-    final a = _aController.text;
-    final b = _bController.text;
-    final m = _modController.text;
-
-    switch (_operation) {
-      case 'add':
-        return '($a + $b) mod $m = $_result';
-      case 'sub':
-        return '($a − $b) mod $m = $_result';
-      case 'mul':
-        return '($a × $b) mod $m = $_result';
-      case 'pow':
-        return '$a^$b mod $m = $_result';
-      case 'inv':
-        return '$a^(-1) mod $m = $_result';
-      default:
-        return '';
-    }
-  }
-
-  @override
-  void dispose() {
-    _aController.dispose();
-    _bController.dispose();
-    _modController.dispose();
-    super.dispose();
-  }
-
-  void _unfocusInputs() {
-    FocusScope.of(context).unfocus();
   }
 }

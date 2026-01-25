@@ -1,7 +1,5 @@
 import 'package:app/core/engine.dart';
 import 'package:app/services/calculator_service.dart';
-import 'package:app/services/conversion_service.dart';
-import 'package:app/services/function_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'scientific_calculator_page.dart';

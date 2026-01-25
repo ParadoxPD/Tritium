@@ -75,13 +75,26 @@ class CalculatorState extends ChangeNotifier {
   }
 
   void evaluate() {
-    final input = controller.text.trim();
+    String input = controller.text.trim();
     if (input.isEmpty) {
       _display = '0';
       notifyListeners();
       return;
     }
+    const replacements = {
+      'sinh⁻¹': 'asinh',
+      'cosh⁻¹': 'acosh',
+      'tanh⁻¹': 'atanh',
+      'sin⁻¹': 'asin',
+      'cos⁻¹': 'acos',
+      'tan⁻¹': 'atan',
+    };
 
+    replacements.forEach((k, v) {
+      input = input.replaceAll(k, v);
+    });
+
+    print(input);
     final result = _engine.evaluate(input, _context);
 
     if (result is EngineSuccess) {
@@ -96,11 +109,27 @@ class CalculatorState extends ChangeNotifier {
 
   void _insertToken(String token) {
     token = switch (token) {
-      "³√" => "3√",
-      "ⁿ√" => "√",
-      "x²" => "^2",
-      "x³" => "^3",
-      "xⁿ" => "^",
+      '³√' => '3√',
+      'ⁿ√' => '√',
+      'x²' => '^2',
+      'x³' => '^3',
+      'xⁿ' => '^',
+      'sin' => 'sin(',
+      'cos' => 'cos(',
+      'tan' => 'tan(',
+      'sin⁻¹' => 'sin⁻¹(',
+      'cos⁻¹' => 'cos⁻¹(',
+      'tan⁻¹' => 'tan⁻¹(',
+      'sinh' => 'sinh(',
+      'cosh' => 'cosh(',
+      'tanh' => 'tanh(',
+      'sinh⁻¹' => 'sinh⁻¹(',
+      'cosh⁻¹' => 'cosh⁻¹(',
+      'tanh⁻¹' => 'tanh⁻¹(',
+      'log' => 'log(',
+      'ln' => 'ln(',
+      'Pol' => 'Pol(',
+      'Rec' => 'Rec(',
       _ => token,
     };
     final cursorPos = controller.selection.base.offset;

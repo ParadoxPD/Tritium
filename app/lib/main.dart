@@ -3,6 +3,8 @@ import 'package:app/repositories/function_repository.dart';
 import 'package:app/services/conversion_service.dart';
 import 'package:app/services/function_service.dart';
 import 'package:app/state/calculator_state.dart';
+import 'package:app/state/matrix_calculator_state.dart';
+import 'package:app/state/modulo_calculator_state.dart';
 import 'package:app/theme/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -29,6 +31,8 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => CalculatorState(engine)),
+        ChangeNotifierProvider(create: (_) => MatrixCalculatorState(engine)),
+        ChangeNotifierProvider(create: (_) => ModuloCalculatorState(engine)),
         Provider<EvaluationEngine>.value(value: engine),
         Provider<FunctionService>.value(value: functionService),
         ChangeNotifierProvider<ConversionService>.value(

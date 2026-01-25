@@ -1,6 +1,6 @@
 // ============================================================================
 // FILE: core/engine/evaluator/evaluator.dart
-// Evaluates Bound AST to produce Values
+// Updated to pass context to native functions
 // ============================================================================
 
 import 'dart:math' as math;
@@ -36,12 +36,10 @@ class Evaluator {
     _variables[name] = value;
   }
 
-  // ADDED: Required by Engine.getVariable()
   Value? getVariable(String name) {
     return _variables[name];
   }
 
-  // ADDED: Required by Engine.clearVariables()
   void clearUserVariables() {
     _variables.clear();
   }
@@ -163,6 +161,7 @@ class Evaluator {
       final cb = _toComplex(b);
       return ComplexValue(ca.real - cb.real, ca.imaginary - cb.imaginary);
     }
+    if (a is MatrixValue && b is MatrixValue) return _subtractMatrices(a, b);
     throw RuntimeError('Cannot subtract ${a.runtimeType} and ${b.runtimeType}');
   }
 
@@ -177,6 +176,11 @@ class Evaluator {
         ca.real * cb.imaginary + ca.imaginary * cb.real,
       );
     }
+    if (a is NumberValue && b is MatrixValue)
+      return _scalarMultiply(b, a.value);
+    if (a is MatrixValue && b is NumberValue)
+      return _scalarMultiply(a, b.value);
+
     if (a is MatrixValue && b is MatrixValue) return _multiplyMatrices(a, b);
     throw RuntimeError('Cannot multiply ${a.runtimeType} and ${b.runtimeType}');
   }
@@ -271,7 +275,8 @@ class Evaluator {
       );
     }
 
-    return fn.execute(args);
+    // Pass the current context to the function
+    return fn.execute(args, _currentContext);
   }
 
   Value _evaluateRoot(BoundRoot root) {
@@ -325,7 +330,7 @@ class Evaluator {
     return RecordValue(fields);
   }
 
-  // ... (Matrix/Vector/Complex helpers _toComplex, _addMatrices, etc. remain unchanged) ...
+  // Matrix/Vector/Complex helpers
   ComplexValue _toComplex(Value v) {
     if (v is ComplexValue) return v;
     if (v is NumberValue) return ComplexValue(v.value, 0);
@@ -370,6 +375,25 @@ class Evaluator {
     return MatrixValue(result);
   }
 
+  MatrixValue _subtractMatrices(MatrixValue a, MatrixValue b) {
+    if (a.rows != b.rows || a.cols != b.cols) {
+      throw RuntimeError('Matrix dimensions must match for subtraction');
+    }
+    final result = List.generate(
+      a.rows,
+      (i) => List.generate(a.cols, (j) => a.data[i][j] - b.data[i][j]),
+    );
+    return MatrixValue(result);
+  }
+
+  MatrixValue _scalarMultiply(MatrixValue a, double scalar) {
+    final result = List.generate(
+      a.rows,
+      (i) => List.generate(a.cols, (j) => a.data[i][j] * scalar),
+    );
+    return MatrixValue(result);
+  }
+
   bool _equals(Value a, Value b) {
     if (a is NumberValue && b is NumberValue) return a.value == b.value;
     if (a is BooleanValue && b is BooleanValue) return a.value == b.value;
@@ -391,9 +415,10 @@ class Evaluator {
   }
 }
 
+// Updated NativeFunction to accept context
 class NativeFunction {
   final int arity;
-  final Value Function(List<Value>) execute;
+  final Value Function(List<Value>, EvalContext?) execute;
 
   const NativeFunction(this.arity, this.execute);
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/app_page.dart';
-import '../utils/matrix_operations.dart';
 import '../theme/theme_provider.dart';
+import '../state/matrix_calculator_state.dart';
 
 class MatrixCalculatorPage extends StatefulWidget {
   const MatrixCalculatorPage({Key? key}) : super(key: key);
@@ -12,83 +12,20 @@ class MatrixCalculatorPage extends StatefulWidget {
 }
 
 class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
-  static List<int> sizes = [2, 3, 4, 5, 6, 7, 8, 9, 10];
-  static int defaultSize = 3;
-  int rows1 = defaultSize, cols1 = defaultSize;
-  int rows2 = defaultSize, cols2 = defaultSize;
-  List<List<double>> matrix1 = [
-    [0, 0],
-    [0, 0],
-  ];
-  List<List<double>> matrix2 = [
-    [0, 0],
-    [0, 0],
-  ];
-  String result = '';
-  String _operation = '';
-
-  void _resizeMatrix1() {
-    setState(() {
-      matrix1 = List.generate(rows1, (i) => List.filled(cols1, 0.0));
-    });
-  }
-
-  void _resizeMatrix2() {
-    setState(() {
-      matrix2 = List.generate(rows2, (i) => List.filled(cols2, 0.0));
-    });
-  }
-
-  void _calculate(String operation) {
-    _unfocusInputs();
-    setState(() {
-      _operation = operation;
-    });
-
-    try {
-      switch (operation) {
-        case 'add':
-          final resultMatrix = MatrixOperations.add(matrix1, matrix2);
-          setState(() {
-            result = MatrixOperations.formatMatrix(resultMatrix);
-          });
-          break;
-        case 'multiply':
-          final resultMatrix = MatrixOperations.multiply(matrix1, matrix2);
-          setState(() {
-            result = MatrixOperations.formatMatrix(resultMatrix);
-          });
-          break;
-        case 'det':
-          final det = MatrixOperations.determinant(matrix1);
-          setState(() {
-            result = 'Determinant: ${det.toStringAsFixed(4)}';
-          });
-          break;
-        case 'transpose':
-          final resultMatrix = MatrixOperations.transpose(matrix1);
-          setState(() {
-            result = MatrixOperations.formatMatrix(resultMatrix);
-          });
-          break;
-      }
-    } catch (e) {
-      setState(() {
-        result = 'Error: ${e.toString().replaceAll('Exception: ', '')}';
-      });
-    }
-  }
+  static const List<int> sizes = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+  MatrixOperation? _selectedOperation;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().currentTheme;
+    final state = context.watch<MatrixCalculatorState>();
 
     return AppPage(
       title: 'Matrix Calculator',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Matrix 1
+          // Matrix A
           ThemedCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,34 +45,38 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
                       children: [
                         Text('Size:', style: TextStyle(color: theme.muted)),
                         const SizedBox(width: 8),
-                        _buildSizeDropdown(rows1, (v) {
-                          setState(() {
-                            rows1 = v!;
-                            _resizeMatrix1();
-                          });
-                        }, theme),
+                        _buildSizeDropdown(
+                          state.rowsA,
+                          (v) => state.resizeMatrixA(v!, state.colsA),
+                          theme,
+                        ),
                         const SizedBox(width: 4),
                         Text('×', style: TextStyle(color: theme.muted)),
                         const SizedBox(width: 4),
-                        _buildSizeDropdown(cols1, (v) {
-                          setState(() {
-                            cols1 = v!;
-                            _resizeMatrix1();
-                          });
-                        }, theme),
+                        _buildSizeDropdown(
+                          state.colsA,
+                          (v) => state.resizeMatrixA(state.rowsA, v!),
+                          theme,
+                        ),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                _buildMatrixInput(matrix1, rows1, cols1, theme),
+                _buildMatrixInput(
+                  state.matrixA,
+                  state.rowsA,
+                  state.colsA,
+                  (i, j, v) => state.updateA(i, j, v),
+                  theme,
+                ),
               ],
             ),
           ),
 
           const SizedBox(height: 16),
 
-          // Matrix 2
+          // Matrix B
           ThemedCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,27 +96,83 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
                       children: [
                         Text('Size:', style: TextStyle(color: theme.muted)),
                         const SizedBox(width: 8),
-                        _buildSizeDropdown(rows2, (v) {
-                          setState(() {
-                            rows2 = v!;
-                            _resizeMatrix2();
-                          });
-                        }, theme),
+                        _buildSizeDropdown(
+                          state.rowsB,
+                          (v) => state.resizeMatrixB(v!, state.colsB),
+                          theme,
+                        ),
                         const SizedBox(width: 4),
                         Text('×', style: TextStyle(color: theme.muted)),
                         const SizedBox(width: 4),
-                        _buildSizeDropdown(cols2, (v) {
-                          setState(() {
-                            cols2 = v!;
-                            _resizeMatrix2();
-                          });
-                        }, theme),
+                        _buildSizeDropdown(
+                          state.colsB,
+                          (v) => state.resizeMatrixB(state.rowsB, v!),
+                          theme,
+                        ),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                _buildMatrixInput(matrix2, rows2, cols2, theme),
+                _buildMatrixInput(
+                  state.matrixB,
+                  state.rowsB,
+                  state.colsB,
+                  (i, j, v) => state.updateB(i, j, v),
+                  theme,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Scalar Input (for scalar multiplication)
+          ThemedCard(
+            child: Row(
+              children: [
+                Text(
+                  'Scalar:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: theme.accent,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: theme.panel,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: theme.subtle),
+                    ),
+                    child: TextField(
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: theme.foreground,
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 12,
+                        ),
+                        hintText: '1.0',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                        signed: true,
+                      ),
+                      onChanged: (v) {
+                        final value = double.tryParse(v) ?? 1.0;
+                        state.updateScalar(value);
+                      },
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -202,31 +199,83 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
                   children: [
                     _buildOpButton(
                       'A + B',
-                      'add',
+                      MatrixOperation.add,
                       Icons.add,
                       theme.success,
                       theme,
+                      state,
+                    ),
+                    _buildOpButton(
+                      'A - B',
+                      MatrixOperation.subtract,
+                      Icons.remove,
+                      theme.warning,
+                      theme,
+                      state,
                     ),
                     _buildOpButton(
                       'A × B',
-                      'multiply',
+                      MatrixOperation.multiply,
                       Icons.close,
                       theme.primary,
                       theme,
+                      state,
+                    ),
+                    _buildOpButton(
+                      'Scalar × A',
+                      MatrixOperation.scalarMultiply,
+                      Icons.looks_one,
+                      theme.accent,
+                      theme,
+                      state,
                     ),
                     _buildOpButton(
                       'det(A)',
-                      'det',
+                      MatrixOperation.determinant,
                       Icons.calculate,
-                      theme.accent,
+                      theme.secondary,
                       theme,
+                      state,
                     ),
                     _buildOpButton(
-                      'A^T',
-                      'transpose',
+                      'A⁻¹',
+                      MatrixOperation.inverse,
+                      Icons.flip,
+                      theme.primary,
+                      theme,
+                      state,
+                    ),
+                    _buildOpButton(
+                      'Aᵀ',
+                      MatrixOperation.transpose,
                       Icons.swap_calls,
                       theme.secondary,
                       theme,
+                      state,
+                    ),
+                    _buildOpButton(
+                      'rank(A)',
+                      MatrixOperation.rank,
+                      Icons.stairs,
+                      theme.accent,
+                      theme,
+                      state,
+                    ),
+                    _buildOpButton(
+                      'trace(A)',
+                      MatrixOperation.trace,
+                      Icons.trending_up,
+                      theme.warning,
+                      theme,
+                      state,
+                    ),
+                    _buildOpButton(
+                      'eigenvalues(A)',
+                      MatrixOperation.eigen,
+                      Icons.analytics,
+                      theme.error,
+                      theme,
+                      state,
                     ),
                   ],
                 ),
@@ -237,33 +286,22 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
           const SizedBox(height: 16),
 
           // Result
-          if (result.isNotEmpty)
+          if (state.error != null)
             ThemedCard(
-              color: result.startsWith('Error')
-                  ? theme.error.withOpacity(0.1)
-                  : theme.success.withOpacity(0.1),
+              color: theme.error.withOpacity(0.1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        result.startsWith('Error')
-                            ? Icons.error_outline
-                            : Icons.check_circle,
-                        color: result.startsWith('Error')
-                            ? theme.error
-                            : theme.success,
-                      ),
+                      Icon(Icons.error_outline, color: theme.error),
                       const SizedBox(width: 8),
                       Text(
-                        result.startsWith('Error') ? 'Error' : 'Result',
+                        'Error',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: result.startsWith('Error')
-                              ? theme.error
-                              : theme.success,
+                          color: theme.error,
                         ),
                       ),
                     ],
@@ -275,18 +313,86 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
                     decoration: BoxDecoration(
                       color: theme.panel,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: result.startsWith('Error')
-                            ? theme.error
-                            : theme.success,
-                        width: 2,
-                      ),
+                      border: Border.all(color: theme.error, width: 2),
                     ),
                     child: SelectableText(
-                      result,
+                      state.error!,
+                      style: TextStyle(fontSize: 16, color: theme.foreground),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          if (state.matrixResult != null)
+            ThemedCard(
+              color: theme.success.withOpacity(0.1),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, color: theme.success),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Result Matrix',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  MatrixTable(matrix: state.matrixResult!, theme: theme),
+                ],
+              ),
+            ),
+
+          if (state.scalarResult != null)
+            ThemedCard(
+              color: theme.success.withOpacity(0.1),
+              child: ScalarResultCard(
+                label: _getScalarLabel(_selectedOperation),
+                value: state.scalarResult!,
+                theme: theme,
+              ),
+            ),
+
+          if (state.message != null)
+            ThemedCard(
+              color: theme.accent.withOpacity(0.1),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, color: theme.accent),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Result',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.panel,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: theme.accent, width: 2),
+                    ),
+                    child: SelectableText(
+                      state.message!,
                       style: TextStyle(
-                        fontSize: result.contains('[') ? 16 : 24,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                         fontFamily: 'monospace',
                         color: theme.foreground,
                       ),
@@ -298,6 +404,15 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
         ],
       ),
     );
+  }
+
+  String _getScalarLabel(MatrixOperation? op) {
+    return switch (op) {
+      MatrixOperation.determinant => 'Determinant',
+      MatrixOperation.rank => 'Rank',
+      MatrixOperation.trace => 'Trace',
+      _ => 'Result',
+    };
   }
 
   Widget _buildSizeDropdown(
@@ -332,6 +447,7 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
     List<List<double>> matrix,
     int rows,
     int cols,
+    void Function(int, int, double) onUpdate,
     dynamic theme,
   ) {
     return Column(
@@ -369,9 +485,7 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
                       ),
                       onChanged: (v) {
                         final value = double.tryParse(v) ?? 0;
-                        setState(() {
-                          matrix[i][j] = value;
-                        });
+                        onUpdate(i, j, value);
                       },
                     ),
                   ),
@@ -386,15 +500,26 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
 
   Widget _buildOpButton(
     String label,
-    String op,
+    MatrixOperation op,
     IconData icon,
     Color color,
     dynamic theme,
+    MatrixCalculatorState state,
   ) {
-    final isSelected = _operation == op && result.isNotEmpty;
+    final isSelected =
+        _selectedOperation == op &&
+        (state.matrixResult != null ||
+            state.scalarResult != null ||
+            state.message != null);
 
     return InkWell(
-      onTap: () => _calculate(op),
+      onTap: () {
+        _unfocusInputs();
+        setState(() {
+          _selectedOperation = op;
+        });
+        state.calculate(op);
+      },
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -427,5 +552,93 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
 
   void _unfocusInputs() {
     FocusScope.of(context).unfocus();
+  }
+}
+
+class MatrixTable extends StatelessWidget {
+  final List<List<double>> matrix;
+  final dynamic theme;
+
+  const MatrixTable({Key? key, required this.matrix, required this.theme})
+    : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.panel,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.success, width: 2),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Table(
+            border: TableBorder.all(color: theme.subtle),
+            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+            defaultColumnWidth: const IntrinsicColumnWidth(),
+            children: matrix.map((row) {
+              return TableRow(
+                children: row.map((v) {
+                  return Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      v.toStringAsFixed(3),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.bold,
+                        color: theme.foreground,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ScalarResultCard extends StatelessWidget {
+  final String label;
+  final double value;
+  final dynamic theme;
+
+  const ScalarResultCard({
+    Key? key,
+    required this.label,
+    required this.value,
+    required this.theme,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.panel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.success, width: 2),
+      ),
+      child: Column(
+        children: [
+          Text(label, style: TextStyle(fontSize: 16, color: theme.muted)),
+          const SizedBox(height: 8),
+          SelectableText(
+            value.toStringAsFixed(6),
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+              color: theme.foreground,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -781,7 +781,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       btn('ln', shift: 'eˣ', isFunction: true),
 
       // Row 3
-      btn('Pol(', shift: 'Rec(', isFunction: true),
+      btn('Pol', shift: 'Rec', isFunction: true),
       btn('HYP', customOnTap: () => state.toggleHyp(), isFunction: true),
       btn(
         state.isHyp ? 'sinh' : 'sin',

@@ -11,7 +11,7 @@ class CalculatorState extends ChangeNotifier {
   final TextEditingController controller = TextEditingController();
   final ScrollController textScrollController = ScrollController();
 
-  CalculatorUIMode _uiMode = CalculatorUIMode.scientific;
+  CalculatorUIMode _uiMode = CalculatorUIMode.basic;
 
   static const _keyUiMode = "ui_mode";
   static const _keyAngleMode = "angle_mode";

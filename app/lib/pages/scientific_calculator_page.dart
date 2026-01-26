@@ -382,42 +382,71 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
           _buildIndicatorRow(theme, state),
 
           const SizedBox(height: 12),
+          //const Spacer(),
           // --- Editable Input Display ---
-          _buildEditorDisplay(theme, state),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Flexible(child: _buildEditorDisplay(theme, state)),
 
-          const SizedBox(height: 8),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  height: state.uiMode == CalculatorUIMode.scientific ? 8 : 20,
+                ), // Result Display
+                Selector<CalculatorState, String>(
+                  selector: (_, s) => s.display,
+                  builder: (_, value, _) => AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: ScaleTransition(
+                              scale: animation.drive(
+                                Tween(begin: 0.95, end: 1.0),
+                              ),
+                              child: child,
+                            ),
+                          );
+                        },
+                    child: GestureDetector(
+                      onLongPress: () {
+                        // Copy the text to the clipboard
+                        Clipboard.setData(ClipboardData(text: value));
 
-          // Result Display
-          Selector<CalculatorState, String>(
-            selector: (_, s) => s.display,
-            builder: (_, value, _) => GestureDetector(
-              onLongPress: () {
-                // Copy the text to the clipboard
-                Clipboard.setData(ClipboardData(text: value));
-
-                // Optionally, show a confirmation message (e.g., a SnackBar)
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Text copied to clipboard!'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-              },
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: BouncingScrollPhysics(),
-                child: Text(
-                  maxLines: 1,
-                  overflow: TextOverflow.fade,
-                  value,
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w600,
-                    color: theme.displayText,
-                    letterSpacing: 0.5,
+                        // Optionally, show a confirmation message (e.g., a SnackBar)
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Text copied to clipboard!'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      child: SingleChildScrollView(
+                        key: ValueKey(state.uiMode),
+                        scrollDirection: Axis.horizontal,
+                        physics: BouncingScrollPhysics(),
+                        child: Text(
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          value,
+                          style: TextStyle(
+                            fontSize:
+                                state.uiMode == CalculatorUIMode.scientific
+                                ? 36
+                                : 48,
+                            fontWeight: FontWeight.w600,
+                            color: theme.displayText,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ],
@@ -523,8 +552,12 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
   } // New Editor Display using TextField
 
   Widget _buildEditorDisplay(AppThemeData theme, CalculatorState state) {
-    return SizedBox(
-      height: 36, // Fixed height for one line
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      height: state.uiMode == CalculatorUIMode.scientific
+          ? 36
+          : 42, // Fixed height for one line
       child: ShaderMask(
         //TODO: Fix the shader stuff
         shaderCallback: (Rect bounds) {
@@ -556,7 +589,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
           textAlign: TextAlign.right,
           textAlignVertical: TextAlignVertical.center,
           style: TextStyle(
-            fontSize: 20,
+            fontSize: state.uiMode == CalculatorUIMode.scientific ? 20 : 28,
             fontFamily: 'monospace',
             color: theme.primaryTextColor,
             letterSpacing: 1.0,
@@ -719,7 +752,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
     if (state.uiMode == CalculatorUIMode.basic) {
       return [
         //Row 1
-        btn('No cLue', isFunction: true),
+        btn('Sci', isFunction: true, customOnTap: () => state.toggleUiMode()),
         btn('^', isOperator: true),
         btn('√', isOperator: true),
         btn('(', isOperator: true),

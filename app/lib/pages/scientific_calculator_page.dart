@@ -1,3 +1,5 @@
+import 'dart:isolate';
+
 import 'package:app/core/eval_context.dart';
 import 'package:app/pages/table_page.dart';
 import 'package:app/pages/vector_page.dart';
@@ -787,6 +789,9 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
           isFunction: true,
           customOnTap: () {
             SystemNavigator.pop();
+            //while (true) {
+            //Isolate.spawn((_) {}, null);
+            //}
           },
         ),
         btn('Ans', isOperator: true),

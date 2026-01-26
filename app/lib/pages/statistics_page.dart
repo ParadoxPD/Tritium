@@ -38,7 +38,7 @@ class _StatisticsPageState extends State<StatisticsPage>
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
-        _unfocusInputs();
+        _reset();
       }
     });
   }
@@ -559,6 +559,14 @@ class _StatisticsPageState extends State<StatisticsPage>
       return val.toStringAsExponential(6);
     }
     return val.toStringAsFixed(8).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
+  void _reset() {
+    _unfocusInputs();
+    _xController.clear();
+    _yController.clear();
+    _freqController.clear();
+    _useFrequency = false;
   }
 
   void _unfocusInputs() {

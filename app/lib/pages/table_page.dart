@@ -2,13 +2,12 @@ import 'package:app/core/engine.dart';
 import 'package:app/core/engine_result.dart';
 import 'package:app/core/eval_context.dart';
 import 'package:app/core/eval_types.dart';
-import 'package:app/services/calculator_service.dart';
 import 'package:app/theme/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class TablePage extends StatefulWidget {
-  const TablePage({Key? key}) : super(key: key);
+  const TablePage({super.key});
 
   @override
   State<TablePage> createState() => _TablePageState();
@@ -28,7 +27,7 @@ class _TablePageState extends State<TablePage> {
   );
 
   bool _useTwoFunctions = false;
-  List<Map<String, double>> _tableData = [];
+  final List<Map<String, double>> _tableData = [];
   String? _error;
 
   @override
@@ -134,7 +133,7 @@ class _TablePageState extends State<TablePage> {
                       style: TextStyle(color: theme.muted, fontSize: 12),
                     ),
                     value: _useTwoFunctions,
-                    activeColor: theme.primary,
+                    activeThumbColor: theme.primary,
                     onChanged: (val) {
                       setState(() => _useTwoFunctions = val);
                       this.setState(() => _useTwoFunctions = val);
@@ -174,7 +173,9 @@ class _TablePageState extends State<TablePage> {
                     labelText: 'f(x)',
                     hintText: 'e.g., x^2 + 2*x + 1',
                     labelStyle: TextStyle(color: theme.primary),
-                    hintStyle: TextStyle(color: theme.muted.withOpacity(0.5)),
+                    hintStyle: TextStyle(
+                      color: theme.muted.withValues(alpha: 0.5),
+                    ),
                     filled: true,
                     fillColor: theme.background,
                     border: OutlineInputBorder(
@@ -194,7 +195,9 @@ class _TablePageState extends State<TablePage> {
                       labelText: 'g(x)',
                       hintText: 'e.g., sin(x)',
                       labelStyle: TextStyle(color: theme.primary),
-                      hintStyle: TextStyle(color: theme.muted.withOpacity(0.5)),
+                      hintStyle: TextStyle(
+                        color: theme.muted.withValues(alpha: 0.5),
+                      ),
                       filled: true,
                       fillColor: theme.background,
                       border: OutlineInputBorder(
@@ -314,7 +317,7 @@ class _TablePageState extends State<TablePage> {
           if (_error != null)
             Container(
               padding: const EdgeInsets.all(12),
-              color: theme.error.withOpacity(0.1),
+              color: theme.error.withValues(alpha: 0.1),
               child: Row(
                 children: [
                   Icon(Icons.error_outline, color: theme.error),
@@ -336,7 +339,7 @@ class _TablePageState extends State<TablePage> {
                         Icon(
                           Icons.table_chart_outlined,
                           size: 80,
-                          color: theme.muted.withOpacity(0.3),
+                          color: theme.muted.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -347,7 +350,7 @@ class _TablePageState extends State<TablePage> {
                         Text(
                           'Enter function and generate',
                           style: TextStyle(
-                            color: theme.muted.withOpacity(0.7),
+                            color: theme.muted.withValues(alpha: 0.7),
                             fontSize: 14,
                           ),
                         ),
@@ -358,12 +361,8 @@ class _TablePageState extends State<TablePage> {
                     scrollDirection: Axis.horizontal,
                     child: SingleChildScrollView(
                       child: DataTable(
-                        headingRowColor: MaterialStateProperty.all(
-                          theme.surface,
-                        ),
-                        dataRowColor: MaterialStateProperty.all(
-                          theme.background,
-                        ),
+                        headingRowColor: WidgetStateProperty.all(theme.surface),
+                        dataRowColor: WidgetStateProperty.all(theme.background),
                         border: TableBorder.all(color: theme.subtle, width: 1),
                         columns: [
                           DataColumn(

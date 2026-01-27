@@ -4,7 +4,7 @@ import '../widgets/app_page.dart';
 import '../theme/theme_provider.dart';
 
 class BaseNCalculatorPage extends StatefulWidget {
-  const BaseNCalculatorPage({Key? key}) : super(key: key);
+  const BaseNCalculatorPage({super.key});
 
   @override
   State<BaseNCalculatorPage> createState() => _BaseNCalculatorPageState();
@@ -171,7 +171,7 @@ class _BaseNCalculatorPageState extends State<BaseNCalculatorPage> {
           // Result Section
           if (_error.isNotEmpty)
             ThemedCard(
-              color: theme.error.withOpacity(0.1),
+              color: theme.error.withValues(alpha: 0.1),
               child: Row(
                 children: [
                   Icon(Icons.error_outline, color: theme.error),
@@ -192,7 +192,7 @@ class _BaseNCalculatorPageState extends State<BaseNCalculatorPage> {
 
           if (_result.isNotEmpty)
             ThemedCard(
-              color: theme.success.withOpacity(0.1),
+              color: theme.success.withValues(alpha: 0.1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

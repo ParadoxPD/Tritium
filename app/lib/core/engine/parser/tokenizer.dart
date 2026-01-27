@@ -142,12 +142,16 @@ class Tokenizer {
   void _number() {
     // If it started with a dot, we already consumed it in the switch,
     // but the logic below handles the rest.
-    while (_isDigit(_peek())) _advance();
+    while (_isDigit(_peek())) {
+      _advance();
+    }
 
     // Look for a fractional part
     if (_peek() == '.' && _isDigit(_peekNext())) {
       _advance(); // Consume the "."
-      while (_isDigit(_peek())) _advance();
+      while (_isDigit(_peek())) {
+        _advance();
+      }
     }
 
     // Scientific notation: 1.2e-10
@@ -155,7 +159,9 @@ class Tokenizer {
         (_isDigit(_peekNext()) || _peekNext() == '-' || _peekNext() == '+')) {
       _advance(); // Consume 'e'
       if (_peek() == '+' || _peek() == '-') _advance();
-      while (_isDigit(_peek())) _advance();
+      while (_isDigit(_peek())) {
+        _advance();
+      }
     }
 
     final value = double.parse(input.substring(_start, _current));
@@ -163,7 +169,9 @@ class Tokenizer {
   }
 
   void _identifier() {
-    while (_isAlphaNumeric(_peek())) _advance();
+    while (_isAlphaNumeric(_peek())) {
+      _advance();
+    }
 
     final text = input.substring(_start, _current);
     final type = _keywords[text] ?? TokenType.identifier;

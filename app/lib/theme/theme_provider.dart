@@ -211,12 +211,12 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   Future<void> setCustomPastel(Color seed) async {
-    _customPastelSeed = seed.value;
+    _customPastelSeed = seed.toARGB32();
     _themeType = ThemeType.customPastel;
     _currentThemeGroup = ThemeMode.light;
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_pastelSeedKey, seed.value);
+    await prefs.setInt(_pastelSeedKey, seed.toARGB32());
     await prefs.setString(_themeKey, _themeType.name);
     await prefs.setString(_themeGroupKey, _currentThemeGroup.name);
 

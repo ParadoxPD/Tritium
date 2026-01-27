@@ -1,3 +1,4 @@
+import 'package:app/services/logging_service.dart';
 import 'package:flutter/material.dart';
 import 'package:app/core/engine.dart';
 import 'package:app/core/engine_result.dart';
@@ -20,6 +21,7 @@ enum MatrixOperation {
 class MatrixCalculatorState extends ChangeNotifier {
   final EvaluationEngine _engine;
   final EvalContext _context = const EvalContext();
+  final LoggerService _logger = LoggerService();
 
   // Input Data
   int rowsA = 3, colsA = 3;
@@ -83,7 +85,7 @@ class MatrixCalculatorState extends ChangeNotifier {
       MatrixOperation.eigen => "eigenvalues($strA)",
     };
 
-    print(expression);
+    _logger.trace(expression);
 
     // 3. Evaluate using the engine
     final result = _engine.evaluate(expression, _context);
@@ -110,7 +112,6 @@ class MatrixCalculatorState extends ChangeNotifier {
     }
   }
 
-  /// Converts List<List<double>> to "[[1,2],[3,4]]"
   String _formatMatrixForEngine(List<List<double>> data) {
     final rows = data.map((row) => "[${row.join(',')}]").join(',');
     return "[$rows]";

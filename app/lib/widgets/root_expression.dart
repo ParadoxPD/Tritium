@@ -4,7 +4,11 @@ class RootExpression extends StatelessWidget {
   final Widget index;
   final Widget radicand;
 
-  const RootExpression({required this.index, required this.radicand});
+  const RootExpression({
+    super.key,
+    required this.index,
+    required this.radicand,
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -61,7 +61,7 @@ class _ThemeSettingsDialogState extends State<ThemeSettingsDialog> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: ValueListenableBuilder<ThemeMode>(
                     valueListenable: filterMode,
-                    builder: (_, mode, __) {
+                    builder: (_, mode, _) {
                       return SegmentedButton<ThemeMode>(
                         segments: const [
                           ButtonSegment(
@@ -111,7 +111,7 @@ class _ThemeSettingsDialogState extends State<ThemeSettingsDialog> {
                 Expanded(
                   child: ValueListenableBuilder<ThemeMode>(
                     valueListenable: filterMode,
-                    builder: (_, mode, __) {
+                    builder: (_, mode, _) {
                       final themes = mode == ThemeMode.dark
                           ? provider.darkThemes
                           : provider.lightThemes;
@@ -183,7 +183,7 @@ class ThemeTile extends StatelessWidget {
 
     return Selector<ThemeProvider, bool>(
       selector: (_, p) => p.themeType == type,
-      builder: (_, isSelected, __) {
+      builder: (_, isSelected, _) {
         return GestureDetector(
           onTap: () => provider.setTheme(type),
           child: AnimatedContainer(
@@ -197,13 +197,13 @@ class ThemeTile extends StatelessWidget {
               border: Border.all(
                 color: isSelected
                     ? preview.primary
-                    : current.subtle.withOpacity(0.4),
+                    : current.subtle.withValues(alpha: 0.4),
                 width: isSelected ? 2 : 1,
               ),
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: preview.primary.withOpacity(0.35),
+                        color: preview.primary.withValues(alpha: 0.35),
                         blurRadius: 12,
                         spreadRadius: 1,
                       ),
@@ -283,7 +283,7 @@ class _ThemePreviewSwatch extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: theme.primary.withOpacity(isSelected ? 0.35 : 0.15),
+            color: theme.primary.withValues(alpha: isSelected ? 0.35 : 0.15),
             blurRadius: isSelected ? 14 : 6,
             offset: const Offset(0, 4),
           ),

@@ -141,8 +141,9 @@ class Evaluator {
   }
 
   Value _add(Value a, Value b) {
-    if (a is NumberValue && b is NumberValue)
+    if (a is NumberValue && b is NumberValue) {
       return NumberValue(a.value + b.value);
+    }
     if (a is ComplexValue || b is ComplexValue) {
       final ca = _toComplex(a);
       final cb = _toComplex(b);
@@ -154,8 +155,9 @@ class Evaluator {
   }
 
   Value _subtract(Value a, Value b) {
-    if (a is NumberValue && b is NumberValue)
+    if (a is NumberValue && b is NumberValue) {
       return NumberValue(a.value - b.value);
+    }
     if (a is ComplexValue || b is ComplexValue) {
       final ca = _toComplex(a);
       final cb = _toComplex(b);
@@ -166,8 +168,9 @@ class Evaluator {
   }
 
   Value _multiply(Value a, Value b) {
-    if (a is NumberValue && b is NumberValue)
+    if (a is NumberValue && b is NumberValue) {
       return NumberValue(a.value * b.value);
+    }
     if (a is ComplexValue || b is ComplexValue) {
       final ca = _toComplex(a);
       final cb = _toComplex(b);
@@ -176,10 +179,12 @@ class Evaluator {
         ca.real * cb.imaginary + ca.imaginary * cb.real,
       );
     }
-    if (a is NumberValue && b is MatrixValue)
+    if (a is NumberValue && b is MatrixValue) {
       return _scalarMultiply(b, a.value);
-    if (a is MatrixValue && b is NumberValue)
+    }
+    if (a is MatrixValue && b is NumberValue) {
       return _scalarMultiply(a, b.value);
+    }
 
     if (a is MatrixValue && b is MatrixValue) return _multiplyMatrices(a, b);
     throw RuntimeError('Cannot multiply ${a.runtimeType} and ${b.runtimeType}');
@@ -245,11 +250,14 @@ class Evaluator {
   Value _factorial(Value v) {
     if (v is! NumberValue) throw RuntimeError('Factorial requires a number');
     final n = v.value.toInt();
-    if (n < 0 || n != v.value)
+    if (n < 0 || n != v.value) {
       throw RuntimeError('Factorial requires non-negative integer');
+    }
 
     int result = 1;
-    for (int i = 2; i <= n; i++) result *= i;
+    for (int i = 2; i <= n; i++) {
+      result *= i;
+    }
     return NumberValue(result.toDouble());
   }
 
@@ -305,8 +313,9 @@ class Evaluator {
     final data = mat.rows.map((row) {
       return row.map((e) {
         final v = _evaluateExpression(e);
-        if (v is! NumberValue)
+        if (v is! NumberValue) {
           throw RuntimeError('Matrix elements must be numbers');
+        }
         return v.value;
       }).toList();
     }).toList();
@@ -316,8 +325,9 @@ class Evaluator {
   Value _evaluateVector(BoundVectorLiteral vec) {
     final components = vec.components.map((e) {
       final v = _evaluateExpression(e);
-      if (v is! NumberValue)
+      if (v is! NumberValue) {
         throw RuntimeError('Vector components must be numbers');
+      }
       return v.value;
     }).toList();
     return VectorValue(components);

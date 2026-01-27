@@ -7,7 +7,7 @@ import '../widgets/app_page.dart';
 import '../theme/theme_provider.dart';
 
 class ConversionPage extends StatefulWidget {
-  const ConversionPage({Key? key}) : super(key: key);
+  const ConversionPage({super.key});
 
   @override
   State<ConversionPage> createState() => _ConversionPageState();
@@ -167,44 +167,6 @@ class _ConversionPageState extends State<ConversionPage> {
         );
       },
     );
-  }
-
-  // Visual Hierarchy: Headers are bold and smaller, items are indented
-  List<DropdownMenuItem<CategoryDefinition>> _buildGroupedItems(dynamic theme) {
-    List<DropdownMenuItem<CategoryDefinition>> items = [];
-    String? lastDomain;
-
-    for (var cat in UnitData.categories) {
-      if (cat.domain != lastDomain) {
-        items.add(
-          DropdownMenuItem(
-            enabled: false,
-            child: Text(
-              cat.domain.toUpperCase(),
-              style: TextStyle(
-                color: theme.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
-              ),
-            ),
-          ),
-        );
-        lastDomain = cat.domain;
-      }
-      items.add(
-        DropdownMenuItem(
-          value: cat,
-          child: Row(
-            children: [
-              Icon(cat.icon, size: 18, color: theme.muted),
-              SizedBox(width: 12),
-              Text(cat.name, style: TextStyle(color: theme.foreground)),
-            ],
-          ),
-        ),
-      );
-    }
-    return items;
   }
 
   Widget _buildInputRow(

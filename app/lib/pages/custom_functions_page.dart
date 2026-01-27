@@ -10,7 +10,7 @@ import '../widgets/app_page.dart';
 import '../theme/theme_provider.dart';
 
 class CustomFunctionsPage extends StatefulWidget {
-  const CustomFunctionsPage({Key? key}) : super(key: key);
+  const CustomFunctionsPage({super.key});
 
   @override
   State<CustomFunctionsPage> createState() => _CustomFunctionsPageState();
@@ -291,7 +291,7 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
                     children: _parameters.map((p) {
                       return Chip(
                         label: Text(p),
-                        backgroundColor: theme.primary.withOpacity(0.2),
+                        backgroundColor: theme.primary.withValues(alpha: 0.2),
                         deleteIconColor: theme.primary,
                         side: BorderSide(color: theme.primary),
                         onDeleted: () => _removeParameter(p),
@@ -400,7 +400,7 @@ class _CustomFunctionsPageState extends State<CustomFunctionsPage> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: theme.primary.withOpacity(0.2),
+                              color: theme.primary.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -634,7 +634,7 @@ class _FunctionTestDialogState extends State<_FunctionTestDialog> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.success.withOpacity(0.1),
+                  color: theme.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: theme.success),
                 ),
@@ -679,7 +679,7 @@ class _FunctionTestDialogState extends State<_FunctionTestDialog> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.error.withOpacity(0.1),
+                  color: theme.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: theme.error),
                 ),

@@ -8,7 +8,7 @@ enum StatMode { oneVar, twoVar }
 enum RegressionType { linear, quadratic, exponential, power, logarithmic }
 
 class StatisticsPage extends StatefulWidget {
-  const StatisticsPage({Key? key}) : super(key: key);
+  const StatisticsPage({super.key});
 
   @override
   State<StatisticsPage> createState() => _StatisticsPageState();
@@ -221,7 +221,7 @@ class _StatisticsPageState extends State<StatisticsPage>
                       style: TextStyle(color: theme.foreground),
                     ),
                     value: _useFrequency,
-                    activeColor: theme.primary,
+                    activeThumbColor: theme.primary,
                     onChanged: (val) {
                       setState(() => _useFrequency = val);
                       this.setState(() => _useFrequency = val);
@@ -292,7 +292,7 @@ class _StatisticsPageState extends State<StatisticsPage>
             color: theme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),

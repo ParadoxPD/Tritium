@@ -1,5 +1,3 @@
-import 'dart:isolate';
-
 import 'package:app/core/eval_context.dart';
 import 'package:app/pages/table_page.dart';
 import 'package:app/pages/vector_page.dart';
@@ -948,27 +946,27 @@ class _CasioButton extends StatelessWidget {
   Widget build(BuildContext context) {
     Color mainLabelColor = textColor;
     if (isActiveShift && shiftLabel != null) {
-      mainLabelColor = textColor.withOpacity(0.3);
+      mainLabelColor = textColor.withValues(alpha: 0.3);
     }
     if (isActiveAlpha && alphaLabel != null) {
-      mainLabelColor = textColor.withOpacity(0.3);
+      mainLabelColor = textColor.withValues(alpha: 0.3);
     }
 
     return Material(
       color: baseColor,
       borderRadius: BorderRadius.circular(8),
       elevation: 1,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(8),
-        splashColor: Colors.white.withOpacity(0.2),
-        highlightColor: Colors.white.withOpacity(0.1),
+        splashColor: Colors.white.withValues(alpha: 0.2),
+        highlightColor: Colors.white.withValues(alpha: 0.1),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               width: 0.5,
             ),
           ),
@@ -1010,7 +1008,7 @@ class _CasioButton extends StatelessWidget {
                       ],
                       color: isActiveShift
                           ? shiftColor
-                          : shiftColor.withOpacity(0.6),
+                          : shiftColor.withValues(alpha: 0.6),
                       decoration: isActiveShift
                           ? TextDecoration.underline
                           : null,
@@ -1035,7 +1033,7 @@ class _CasioButton extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: isActiveAlpha
                           ? alphaColor
-                          : alphaColor.withOpacity(0.6),
+                          : alphaColor.withValues(alpha: 0.6),
                       decoration: isActiveAlpha
                           ? TextDecoration.underline
                           : null,

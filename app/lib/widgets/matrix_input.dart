@@ -7,12 +7,12 @@ class MatrixInput extends StatelessWidget {
   final Function(int, int, double) onChanged;
 
   const MatrixInput({
-    Key? key,
+    super.key,
     required this.matrix,
     required this.rows,
     required this.cols,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

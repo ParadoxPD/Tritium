@@ -5,7 +5,7 @@ import '../theme/theme_provider.dart';
 import '../state/modulo_calculator_state.dart';
 
 class ModuloCalculatorPage extends StatefulWidget {
-  const ModuloCalculatorPage({Key? key}) : super(key: key);
+  const ModuloCalculatorPage({super.key});
 
   @override
   State<ModuloCalculatorPage> createState() => _ModuloCalculatorPageState();
@@ -346,7 +346,7 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
           // Error Display
           if (state.error != null)
             ThemedCard(
-              color: theme.error.withOpacity(0.1),
+              color: theme.error.withValues(alpha: 0.1),
               child: Row(
                 children: [
                   Icon(Icons.error_outline, color: theme.error, size: 32),
@@ -378,7 +378,7 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
           // Result Display
           if (state.result != null)
             ThemedCard(
-              color: theme.success.withOpacity(0.1),
+              color: theme.success.withValues(alpha: 0.1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -422,7 +422,7 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
           // Message Display (for extended GCD, etc.)
           if (state.message != null)
             ThemedCard(
-              color: theme.accent.withOpacity(0.1),
+              color: theme.accent.withValues(alpha: 0.1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

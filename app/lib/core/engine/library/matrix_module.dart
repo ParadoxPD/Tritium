@@ -40,7 +40,9 @@ class MatrixMathModule extends LibraryModule {
   Value _trace(MatrixValue m) {
     if (m.rows != m.cols) throw RuntimeError('Trace requires a square matrix');
     double sum = 0;
-    for (int i = 0; i < m.rows; i++) sum += m.data[i][i];
+    for (int i = 0; i < m.rows; i++) {
+      sum += m.data[i][i];
+    }
     return NumberValue(sum);
   }
 
@@ -63,12 +65,16 @@ class MatrixMathModule extends LibraryModule {
         for (int i = 0; i < R; i++) {
           if (i != row) {
             double factor = temp[i][rank] / temp[row][rank];
-            for (int j = rank; j < C; j++) temp[i][j] -= factor * temp[row][j];
+            for (int j = rank; j < C; j++) {
+              temp[i][j] -= factor * temp[row][j];
+            }
           }
         }
       } else {
         int reduce = 1;
-        while (row + reduce < R && temp[row + reduce][rank] == 0) reduce++;
+        while (row + reduce < R && temp[row + reduce][rank] == 0) {
+          reduce++;
+        }
         if (row + reduce == R) {
           rank--;
         } else {
@@ -84,8 +90,9 @@ class MatrixMathModule extends LibraryModule {
   }
 
   Value _inverse(MatrixValue m) {
-    if (m.rows != m.cols)
+    if (m.rows != m.cols) {
       throw RuntimeError('Matrix must be square for inverse');
+    }
     int n = m.rows;
     List<List<double>> aug = List.generate(n, (i) {
       return [...m.data[i], ...List.generate(n, (j) => i == j ? 1.0 : 0.0)];
@@ -93,13 +100,18 @@ class MatrixMathModule extends LibraryModule {
 
     for (int i = 0; i < n; i++) {
       double pivot = aug[i][i];
-      if (pivot.abs() < 1e-10)
+      if (pivot.abs() < 1e-10) {
         throw RuntimeError('Matrix is singular and cannot be inverted');
-      for (int j = 0; j < 2 * n; j++) aug[i][j] /= pivot;
+      }
+      for (int j = 0; j < 2 * n; j++) {
+        aug[i][j] /= pivot;
+      }
       for (int k = 0; k < n; k++) {
         if (k != i) {
           double factor = aug[k][i];
-          for (int j = 0; j < 2 * n; j++) aug[k][j] -= factor * aug[i][j];
+          for (int j = 0; j < 2 * n; j++) {
+            aug[k][j] -= factor * aug[i][j];
+          }
         }
       }
     }
@@ -107,8 +119,9 @@ class MatrixMathModule extends LibraryModule {
   }
 
   Value _eigenvalues(MatrixValue m) {
-    if (m.rows != m.cols)
+    if (m.rows != m.cols) {
       throw RuntimeError('Eigenvalues require a square matrix');
+    }
 
     MatrixValue currentA = m;
     for (int i = 0; i < 100; i++) {
@@ -139,10 +152,14 @@ class MatrixMathModule extends LibraryModule {
       List<double> v = List.from(columns[j]);
       for (int i = 0; i < j; i++) {
         R[i][j] = _dotProduct(List.generate(m, (k) => Q[k][i]), columns[j]);
-        for (int k = 0; k < m; k++) v[k] -= R[i][j] * Q[k][i];
+        for (int k = 0; k < m; k++) {
+          v[k] -= R[i][j] * Q[k][i];
+        }
       }
       R[j][j] = _norm(v);
-      for (int k = 0; k < m; k++) Q[k][j] = (R[j][j] == 0) ? 0 : v[k] / R[j][j];
+      for (int k = 0; k < m; k++) {
+        Q[k][j] = (R[j][j] == 0) ? 0 : v[k] / R[j][j];
+      }
     }
 
     return {'Q': MatrixValue(Q), 'R': MatrixValue(R)};
@@ -150,7 +167,9 @@ class MatrixMathModule extends LibraryModule {
 
   double _dotProduct(List<double> a, List<double> b) {
     double sum = 0;
-    for (int i = 0; i < a.length; i++) sum += a[i] * b[i];
+    for (int i = 0; i < a.length; i++) {
+      sum += a[i] * b[i];
+    }
     return sum;
   }
 
@@ -161,7 +180,9 @@ class MatrixMathModule extends LibraryModule {
       a.rows,
       (i) => List.generate(b.cols, (j) {
         double sum = 0;
-        for (int k = 0; k < a.cols; k++) sum += a.data[i][k] * b.data[k][j];
+        for (int k = 0; k < a.cols; k++) {
+          sum += a.data[i][k] * b.data[k][j];
+        }
         return sum;
       }),
     );
@@ -169,16 +190,18 @@ class MatrixMathModule extends LibraryModule {
   }
 
   Value _determinant(MatrixValue m) {
-    if (m.rows != m.cols)
+    if (m.rows != m.cols) {
       throw RuntimeError('Determinant requires square matrix');
+    }
     return NumberValue(_det(m.data));
   }
 
   double _det(List<List<double>> matrix) {
     int n = matrix.length;
     if (n == 1) return matrix[0][0];
-    if (n == 2)
+    if (n == 2) {
       return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+    }
 
     double determinant = 0;
     for (int col = 0; col < n; col++) {

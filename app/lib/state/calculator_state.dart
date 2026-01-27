@@ -1,6 +1,7 @@
 import 'package:app/core/engine.dart';
 import 'package:app/core/engine_result.dart';
 import 'package:app/core/eval_context.dart';
+import 'package:app/services/logging_service.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,6 +13,8 @@ class CalculatorState extends ChangeNotifier {
   final ScrollController textScrollController = ScrollController();
 
   CalculatorUIMode _uiMode = CalculatorUIMode.basic;
+
+  final LoggerService _logger = LoggerService();
 
   static const _keyUiMode = "ui_mode";
   static const _keyAngleMode = "angle_mode";
@@ -94,7 +97,7 @@ class CalculatorState extends ChangeNotifier {
       input = input.replaceAll(k, v);
     });
 
-    print(input);
+    _logger.trace(input);
     final result = _engine.evaluate(input, _context);
 
     if (result is EngineSuccess) {
@@ -224,7 +227,7 @@ class CalculatorState extends ChangeNotifier {
   }
 
   void saveSettings() async {
-    print("saving settings");
+    _logger.trace("saving settings");
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyAngleMode, _context.angleMode.name);
     await prefs.setString(_keyUiMode, _uiMode.name);

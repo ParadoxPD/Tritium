@@ -61,7 +61,7 @@ class Vector {
 }
 
 class VectorPage extends StatefulWidget {
-  const VectorPage({Key? key}) : super(key: key);
+  const VectorPage({super.key});
 
   @override
   State<VectorPage> createState() => _VectorPageState();
@@ -319,8 +319,8 @@ class _VectorPageState extends State<VectorPage> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: _error != null
-                    ? theme.error.withOpacity(0.1)
-                    : theme.primary.withOpacity(0.1),
+                    ? theme.error.withValues(alpha: 0.1)
+                    : theme.primary.withValues(alpha: 0.1),
                 border: Border(
                   top: BorderSide(
                     color: _error != null ? theme.error : theme.primary,

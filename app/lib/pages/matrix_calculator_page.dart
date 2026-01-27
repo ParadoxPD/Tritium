@@ -5,7 +5,7 @@ import '../theme/theme_provider.dart';
 import '../state/matrix_calculator_state.dart';
 
 class MatrixCalculatorPage extends StatefulWidget {
-  const MatrixCalculatorPage({Key? key}) : super(key: key);
+  const MatrixCalculatorPage({super.key});
 
   @override
   State<MatrixCalculatorPage> createState() => _MatrixCalculatorPageState();
@@ -288,7 +288,7 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
           // Result
           if (state.error != null)
             ThemedCard(
-              color: theme.error.withOpacity(0.1),
+              color: theme.error.withValues(alpha: 0.1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -326,7 +326,7 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
 
           if (state.matrixResult != null)
             ThemedCard(
-              color: theme.success.withOpacity(0.1),
+              color: theme.success.withValues(alpha: 0.1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -352,7 +352,7 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
 
           if (state.scalarResult != null)
             ThemedCard(
-              color: theme.success.withOpacity(0.1),
+              color: theme.success.withValues(alpha: 0.1),
               child: ScalarResultCard(
                 label: _getScalarLabel(_selectedOperation),
                 value: state.scalarResult!,
@@ -362,7 +362,7 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
 
           if (state.message != null)
             ThemedCard(
-              color: theme.accent.withOpacity(0.1),
+              color: theme.accent.withValues(alpha: 0.1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -524,7 +524,7 @@ class _MatrixCalculatorPageState extends State<MatrixCalculatorPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.2) : theme.panel,
+          color: isSelected ? color.withValues(alpha: 0.2) : theme.panel,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? color : theme.subtle,
@@ -559,8 +559,7 @@ class MatrixTable extends StatelessWidget {
   final List<List<double>> matrix;
   final dynamic theme;
 
-  const MatrixTable({Key? key, required this.matrix, required this.theme})
-    : super(key: key);
+  const MatrixTable({super.key, required this.matrix, required this.theme});
 
   @override
   Widget build(BuildContext context) {
@@ -609,11 +608,11 @@ class ScalarResultCard extends StatelessWidget {
   final dynamic theme;
 
   const ScalarResultCard({
-    Key? key,
+    super.key,
     required this.label,
     required this.value,
     required this.theme,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

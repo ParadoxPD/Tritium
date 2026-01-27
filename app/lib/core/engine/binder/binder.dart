@@ -225,12 +225,15 @@ class Binder {
     ValueType right,
   ) {
     if (op == BoundBinaryOperator.add || op == BoundBinaryOperator.subtract) {
-      if (left == ValueType.matrix && right == ValueType.matrix)
+      if (left == ValueType.matrix && right == ValueType.matrix) {
         return ValueType.matrix;
-      if (left == ValueType.vector && right == ValueType.vector)
+      }
+      if (left == ValueType.vector && right == ValueType.vector) {
         return ValueType.vector;
-      if (left == ValueType.complex || right == ValueType.complex)
+      }
+      if (left == ValueType.complex || right == ValueType.complex) {
         return ValueType.complex;
+      }
       return ValueType.number;
     }
     return ValueType.number;

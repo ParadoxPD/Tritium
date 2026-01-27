@@ -18,7 +18,7 @@ enum ModuloOperation {
 
 class ModuloCalculatorState extends ChangeNotifier {
   final EvaluationEngine _engine;
-  EvalContext _context = const EvalContext();
+  final EvalContext _context = const EvalContext();
 
   // Calculator display and input
   String _display = '0';
@@ -303,9 +303,7 @@ class ModuloCalculatorState extends ChangeNotifier {
         // For extended GCD which returns [gcd, x, y]
         final list = result.value as ListValue;
         _message =
-            description +
-            '\n' +
-            list.values.map((v) => v.toDisplayString()).join(', ');
+            '$description\n${list.values.map((v) => v.toDisplayString()).join(', ')}';
         _expression = '';
       } else {
         _display = result.value.toDisplayString();

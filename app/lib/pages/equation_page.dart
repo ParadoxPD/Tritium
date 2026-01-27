@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class EquationPage extends StatefulWidget {
-  const EquationPage({Key? key}) : super(key: key);
+  const EquationPage({super.key});
 
   @override
   State<EquationPage> createState() => _EquationPageState();
@@ -712,9 +712,12 @@ class _EquationPageState extends State<EquationPage>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.primary.withOpacity(0.1),
+        color: theme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.primary.withOpacity(0.3), width: 2),
+        border: Border.all(
+          color: theme.primary.withValues(alpha: 0.3),
+          width: 2,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

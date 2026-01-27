@@ -11,12 +11,12 @@ class CalculatorButton extends StatelessWidget {
   final bool isWide;
 
   const CalculatorButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.type,
     required this.onPressed,
     this.isWide = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +48,10 @@ class CalculatorButton extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: theme.subtle.withOpacity(0.3), width: 1),
+            border: Border.all(
+              color: theme.subtle.withValues(alpha: 0.3),
+              width: 1,
+            ),
           ),
           child: Center(
             child: Text(

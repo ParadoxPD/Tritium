@@ -1,5 +1,5 @@
+import 'package:app/core/unit_data.dart';
 import 'package:app/models/unit_models.dart';
-import 'package:app/services/unit_data.dart';
 import 'package:flutter/material.dart';
 
 class ConversionService extends ChangeNotifier {

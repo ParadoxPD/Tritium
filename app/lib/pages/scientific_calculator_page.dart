@@ -2,7 +2,8 @@ import 'package:app/core/eval_context.dart';
 import 'package:app/pages/table_page.dart';
 import 'package:app/pages/vector_page.dart';
 import 'package:app/theme/theme_data.dart';
-import 'package:app/widgets/theme_settings.dart';
+import 'package:app/widgets/scientific_calculator_page/casio_button.dart';
+import 'package:app/widgets/scientific_calculator_page/theme_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -555,93 +556,74 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
-      height: state.uiMode == CalculatorUIMode.scientific
-          ? 36
-          : 42, // Fixed height for one line
-      child: ShaderMask(
-        //TODO: Fix the shader stuff
-        shaderCallback: (Rect bounds) {
-          return LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              theme.displayBackground,
-              theme.displayBackground,
-              theme.displayBackground,
-              theme.displayBackground,
-            ],
-            stops: const [0.0, 0.05, 0.95, 1.0], // Tighter stops
-          ).createShader(bounds);
-        },
-        blendMode: BlendMode.dstIn,
-        child: TextField(
-          controller: state.controller,
-          focusNode: _inputFocusNode,
-          readOnly: true,
+      height: state.uiMode == CalculatorUIMode.scientific ? 36 : 42,
+      child: TextField(
+        controller: state.controller,
+        focusNode: _inputFocusNode,
+        readOnly: true,
 
-          enableInteractiveSelection: true,
+        enableInteractiveSelection: true,
 
-          scrollController: state.textScrollController,
-          scrollPhysics: const BouncingScrollPhysics(),
-          cursorColor: theme.primary,
-          cursorWidth: 2,
-          cursorRadius: const Radius.circular(2),
-          textAlign: TextAlign.right,
-          textAlignVertical: TextAlignVertical.center,
-          style: TextStyle(
-            fontSize: state.uiMode == CalculatorUIMode.scientific ? 20 : 28,
-            fontFamily: 'monospace',
-            color: theme.primaryTextColor,
-            letterSpacing: 1.0,
-          ),
-          decoration: const InputDecoration(
-            isDense: false,
-            filled: false,
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            disabledBorder: InputBorder.none,
-            errorBorder: InputBorder.none,
-            focusedErrorBorder: InputBorder.none,
-            contentPadding: EdgeInsets.fromLTRB(0, 4, 0, 4),
-          ),
-          contextMenuBuilder: (context, editableTextState) {
-            return AdaptiveTextSelectionToolbar(
-              anchors: editableTextState.contextMenuAnchors,
-              children: [
-                TextSelectionToolbarTextButton(
-                  padding: EdgeInsets.symmetric(vertical: 1, horizontal: 4),
-                  onPressed: () async {
-                    final data = await Clipboard.getData(Clipboard.kTextPlain);
-                    if (data?.text == null) return;
-
-                    final selection = state.controller.selection;
-                    final text = state.controller.text;
-
-                    final newText = text.replaceRange(
-                      selection.start,
-                      selection.end,
-                      data!.text!,
-                    );
-
-                    state.controller.value = TextEditingValue(
-                      text: newText,
-                      selection: TextSelection.collapsed(
-                        offset: selection.start + data.text!.length,
-                      ),
-                    );
-
-                    editableTextState.hideToolbar();
-                  },
-                  child: const Text('Paste'),
-                ),
-              ],
-            );
-          },
-
-          showCursor: true,
-          maxLines: 1,
+        scrollController: state.textScrollController,
+        scrollPhysics: const BouncingScrollPhysics(),
+        cursorColor: theme.primary,
+        cursorWidth: 2,
+        cursorRadius: const Radius.circular(2),
+        textAlign: TextAlign.right,
+        textAlignVertical: TextAlignVertical.center,
+        style: TextStyle(
+          fontSize: state.uiMode == CalculatorUIMode.scientific ? 20 : 28,
+          fontFamily: 'monospace',
+          color: theme.primaryTextColor,
+          letterSpacing: 1.0,
         ),
+        decoration: const InputDecoration(
+          isDense: false,
+          filled: false,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          disabledBorder: InputBorder.none,
+          errorBorder: InputBorder.none,
+          focusedErrorBorder: InputBorder.none,
+          contentPadding: EdgeInsets.fromLTRB(0, 4, 0, 4),
+        ),
+        contextMenuBuilder: (context, editableTextState) {
+          return AdaptiveTextSelectionToolbar(
+            anchors: editableTextState.contextMenuAnchors,
+            children: [
+              TextSelectionToolbarTextButton(
+                padding: EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+                onPressed: () async {
+                  final data = await Clipboard.getData(Clipboard.kTextPlain);
+                  if (data?.text == null) return;
+
+                  final selection = state.controller.selection;
+                  final text = state.controller.text;
+
+                  final newText = text.replaceRange(
+                    selection.start,
+                    selection.end,
+                    data!.text!,
+                  );
+
+                  state.controller.value = TextEditingValue(
+                    text: newText,
+                    selection: TextSelection.collapsed(
+                      offset: selection.start + data.text!.length,
+                    ),
+                  );
+
+                  editableTextState.hideToolbar();
+                },
+                child: const Text('Paste'),
+              ),
+            ],
+          );
+        },
+
+        showCursor: true,
+        maxLines: 1,
       ),
     );
   }
@@ -735,7 +717,7 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
           ? theme.buttonSpecial
           : theme.surface;
 
-      return _CasioButton(
+      return CasioButton(
         label: label,
         shiftLabel: shift,
         alphaLabel: alpha,
@@ -887,163 +869,5 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
 
   void _showThemeSettings(BuildContext context) {
     showDialog(context: context, builder: (_) => const ThemeSettingsDialog());
-  }
-}
-
-// _CasioButton class remains unchanged (omitted for brevity, assume it's same as provided)
-class _CasioButton extends StatelessWidget {
-  final String label;
-  final String? shiftLabel;
-  final String? alphaLabel;
-  final bool isActiveShift;
-  final bool isActiveAlpha;
-  final Color baseColor;
-  final Color textColor;
-  final Color shiftColor;
-  final Color alphaColor;
-  final VoidCallback onPressed;
-
-  const _CasioButton({
-    required this.label,
-    this.shiftLabel,
-    this.alphaLabel,
-    required this.isActiveShift,
-    required this.isActiveAlpha,
-    required this.baseColor,
-    required this.textColor,
-    required this.shiftColor,
-    required this.alphaColor,
-    required this.onPressed,
-  });
-
-  double _buttonFontSize(String label, bool isCenter) {
-    if (isCenter) {
-      // Heavy math / operators
-      if (RegExp(r'[∫Σ√π]').hasMatch(label)) return 16;
-
-      // Superscripts / scientific notation
-      if (label.contains('ˣ') || label.contains('⁻¹')) return 15;
-
-      // Long textual labels
-      if (label.length >= 4) return 14;
-
-      // Normal digits / ops
-      return 18;
-    } else {
-      // Heavy math / operators
-      if (RegExp(r'[∫Σ√π]').hasMatch(label)) return 18;
-
-      // Superscripts / scientific notation
-      if (label.contains('ˣ') || label.contains('⁻¹')) return 14;
-
-      if (label.length <= 2) return 14;
-
-      return 10;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Color mainLabelColor = textColor;
-    if (isActiveShift && shiftLabel != null) {
-      mainLabelColor = textColor.withValues(alpha: 0.3);
-    }
-    if (isActiveAlpha && alphaLabel != null) {
-      mainLabelColor = textColor.withValues(alpha: 0.3);
-    }
-
-    return Material(
-      color: baseColor,
-      borderRadius: BorderRadius.circular(8),
-      elevation: 1,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(8),
-        splashColor: Colors.white.withValues(alpha: 0.2),
-        highlightColor: Colors.white.withValues(alpha: 0.1),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Colors.black.withValues(alpha: 0.1),
-              width: 0.5,
-            ),
-          ),
-          child: Stack(
-            children: [
-              Center(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: _buttonFontSize(label, true),
-                    fontWeight: FontWeight.w600,
-                    color: mainLabelColor,
-                    height: 1.0, // prevents vertical shrink
-                    fontFamilyFallback: const [
-                      'Roboto',
-                      'Noto Sans Math',
-                      'Noto Sans Symbols',
-                      'Segoe UI Symbol',
-                    ],
-                  ),
-                ),
-              ),
-              if (shiftLabel != null)
-                Positioned(
-                  left: 4,
-                  top: 3,
-                  child: Text(
-                    shiftLabel!,
-
-                    style: TextStyle(
-                      fontSize: _buttonFontSize(shiftLabel!, false),
-                      fontWeight: FontWeight.bold,
-                      height: 1.0, // prevents vertical shrink
-                      fontFamilyFallback: const [
-                        'Roboto',
-                        'Noto Sans Math',
-                        'Noto Sans Symbols',
-                        'Segoe UI Symbol',
-                      ],
-                      color: isActiveShift
-                          ? shiftColor
-                          : shiftColor.withValues(alpha: 0.6),
-                      decoration: isActiveShift
-                          ? TextDecoration.underline
-                          : null,
-                    ),
-                  ),
-                ),
-              if (alphaLabel != null)
-                Positioned(
-                  right: 4,
-                  top: 3,
-                  child: Text(
-                    alphaLabel!,
-                    style: TextStyle(
-                      fontSize: _buttonFontSize(alphaLabel!, false),
-                      height: 1.0, // prevents vertical shrink
-                      fontFamilyFallback: const [
-                        'Roboto',
-                        'Noto Sans Math',
-                        'Noto Sans Symbols',
-                        'Segoe UI Symbol',
-                      ],
-                      fontWeight: FontWeight.bold,
-                      color: isActiveAlpha
-                          ? alphaColor
-                          : alphaColor.withValues(alpha: 0.6),
-                      decoration: isActiveAlpha
-                          ? TextDecoration.underline
-                          : null,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

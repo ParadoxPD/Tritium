@@ -22,7 +22,6 @@ class AppPage extends StatelessWidget {
       color: theme.background,
       child: Column(
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
             decoration: BoxDecoration(
@@ -45,8 +44,6 @@ class AppPage extends StatelessWidget {
               ],
             ),
           ),
-
-          // Content
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -55,30 +52,6 @@ class AppPage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Card widget with consistent styling
-class ThemedCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsets? padding;
-  final Color? color;
-
-  const ThemedCard({super.key, required this.child, this.padding, this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.watch<ThemeProvider>().currentTheme;
-
-    return Container(
-      padding: padding ?? const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color ?? theme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.subtle, width: 1),
-      ),
-      child: child,
     );
   }
 }

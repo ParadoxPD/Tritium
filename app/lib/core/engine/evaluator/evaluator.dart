@@ -4,6 +4,7 @@
 // ============================================================================
 
 import 'dart:math' as math;
+import 'dart:math';
 
 import 'package:app/core/engine/binder/bound_ast.dart';
 import 'package:app/core/engine/evaluator/runtime_errors.dart';
@@ -19,6 +20,9 @@ class Evaluator {
 
   Evaluator() {
     _variables['Ans'] = NumberValue(0);
+    StandardLibrary.allConstants.forEach((name, value) {
+      _variables[name] = value;
+    });
   }
 
   Value evaluate(BoundNode node, [EvalContext? context]) {
@@ -42,6 +46,14 @@ class Evaluator {
 
   void clearUserVariables() {
     _variables.clear();
+
+    // Re-initialize Ans
+    _variables['Ans'] = NumberValue(0);
+
+    // Re-initialize all standard library constants
+    StandardLibrary.allConstants.forEach((name, value) {
+      _variables[name] = value;
+    });
   }
 
   Value _evaluateExpression(BoundExpression expr) {
@@ -250,15 +262,26 @@ class Evaluator {
   Value _factorial(Value v) {
     if (v is! NumberValue) throw RuntimeError('Factorial requires a number');
     final n = v.value.toInt();
-    if (n < 0 || n != v.value) {
+    if (n < 0) {
       throw RuntimeError('Factorial requires non-negative integer');
     }
 
-    int result = 1;
-    for (int i = 2; i <= n; i++) {
-      result *= i;
+    if (n == v.value) {
+      if (n <= 20) {
+        int r = 1;
+        for (int i = 2; i <= n; i++) {
+          r *= i;
+        }
+        return NumberValue(r.toDouble());
+      }
     }
-    return NumberValue(result.toDouble());
+
+    double logSum = n * (log(n / e) / ln10) + 0.5 * (log(2 * pi * n) / ln10);
+
+    final exponent = logSum.floor();
+    final mantissa = pow(10, logSum - exponent);
+
+    return NumberValueSci(mantissa.toDouble(), exponent);
   }
 
   Value _absolute(Value v) {

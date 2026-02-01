@@ -86,8 +86,48 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
       return;
     }
 
+    // Handle RCL (recall)
+    if (primary == 'RCL' && !state.isShift && !state.isAlpha) {
+      // Open a menu to select which variable to recall
+      _showVariableRecallMenu();
+      return;
+    }
+
     // Normal button press handling
     state.handleButtonPress(primary: primary, shift: shift, alpha: alpha);
+  }
+
+  void _showVariableRecallMenu() {
+    final state = context.read<CalculatorState>();
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Container(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Recall Variable', style: TextStyle(fontSize: 18)),
+            SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['A', 'B', 'C', 'D', 'E', 'F', 'X', 'Y', 'Z', 'M']
+                  .map(
+                    (varName) => ElevatedButton(
+                      onPressed: () {
+                        state.insertAtCursor(varName);
+                        Navigator.pop(ctx);
+                      },
+                      child: Text('$varName ${state.getValue(varName)}'),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _moveCursorLeft() {
@@ -717,6 +757,9 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
           ? theme.buttonSpecial
           : theme.surface;
 
+      final disabledByStoreMode =
+          state.isStoreMode && !isVariableKey(label, alpha);
+
       return CasioButton(
         label: label,
         shiftLabel: shift,
@@ -727,7 +770,10 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
         baseColor: baseColor,
         shiftColor: shiftColor(baseColor),
         alphaColor: alphaColor(baseColor),
-        onPressed: customOnTap ?? () => _handlePress(label, shift, alpha),
+        isDisabled: disabledByStoreMode,
+        onPressed: disabledByStoreMode
+            ? null
+            : customOnTap ?? () => _handlePress(label, shift, alpha),
       );
     }
 
@@ -869,5 +915,10 @@ class _ScientificCalculatorPageState extends State<ScientificCalculatorPage> {
 
   void _showThemeSettings(BuildContext context) {
     showDialog(context: context, builder: (_) => const ThemeSettingsDialog());
+  }
+
+  bool isVariableKey(String label, String? alpha) {
+    const vars = ['A', 'B', 'C', 'D', 'E', 'F', 'X', 'Y', 'Z', 'M'];
+    return vars.contains(label) || vars.contains(alpha);
   }
 }

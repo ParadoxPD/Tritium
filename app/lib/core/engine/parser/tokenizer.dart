@@ -95,6 +95,9 @@ class Tokenizer {
           _match('=') ? TokenType.greaterOrEqual : TokenType.greaterThan,
         );
         break;
+      case '→':
+        _addToken(TokenType.store);
+        break;
 
       // Ignore whitespace
       case ' ':
@@ -198,7 +201,11 @@ class Tokenizer {
       (_current + 1 >= input.length) ? '\x00' : input[_current + 1];
   bool _isAtEnd() => _current >= input.length;
   bool _isDigit(String c) => RegExp(r'[0-9]').hasMatch(c);
-  bool _isAlpha(String c) => RegExp(r'[a-zA-Z_]').hasMatch(c);
+  bool _isAlpha(String c) {
+    final res = RegExp(r'[a-zA-Z_πe]').hasMatch(c);
+    return res;
+  }
+
   bool _isAlphaNumeric(String c) => _isAlpha(c) || _isDigit(c);
 
   static const Map<String, TokenType> _keywords = {
@@ -209,7 +216,7 @@ class Tokenizer {
     'for': TokenType.for_,
     'in': TokenType.in_,
     'i': TokenType.imaginaryUnit,
-    'pi': TokenType.identifier, // You might want a specific type for constants
+    'π': TokenType.identifier, // You might want a specific type for constants
     'e': TokenType.identifier,
   };
 }

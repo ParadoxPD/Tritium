@@ -27,6 +27,22 @@ class Parser {
   Statement _statement() {
     if (_match(TokenType.let)) return _letStatement();
     Expression expression = _expression();
+
+    if (_match(TokenType.store)) {
+      final varName = _consume(
+        TokenType.identifier,
+        'Expected variable name after →',
+      );
+      return LetStatement(varName.lexeme, expression, varName.position);
+    }
+
+    // If starts with 'let', handle as let statement
+    if (_current == 1 && tokens[0].type == TokenType.let) {
+      _current = 0;
+      _advance(); // consume 'let'
+      return _letStatement();
+    }
+
     return ExpressionStatement(expression, expression.position);
   }
 
@@ -113,27 +129,42 @@ class Parser {
   }
 
   bool _canImplicitMultiply() {
-    if (_isAtEnd()) return false;
+    if (_isAtEnd() || _current == 0) return false;
 
     final current = _peek().type;
-    final previous = _current > 0 ? tokens[_current - 1].type : null;
+    final previous = tokens[_current - 1].type;
 
-    // Tokens that can appear on the LEFT of an implicit operation
-    final isLeftValid =
-        previous == TokenType.number ||
-        previous == TokenType.identifier ||
-        previous == TokenType.imaginaryUnit ||
-        previous == TokenType.rightParen ||
-        previous == TokenType.rightBracket;
+    // Tokens that "end" an expression and allow something to be multiplied behind them
+    final validLeft = {
+      TokenType.number,
+      TokenType.identifier,
+      TokenType.imaginaryUnit,
+      TokenType.rightParen,
+      TokenType.rightBracket,
+      TokenType.factorial,
+    };
 
-    // Tokens that can appear on the RIGHT to trigger an implicit operation
-    final isRightValid =
-        current == TokenType.leftParen ||
-        current == TokenType.leftBracket ||
-        current == TokenType.identifier ||
-        current == TokenType.root;
+    // Tokens that "start" a new term and trigger multiplication when following a 'left' token
+    final validRight = {
+      TokenType.leftParen,
+      TokenType.leftBracket,
+      TokenType.identifier,
+      TokenType.imaginaryUnit, // Added this for number * i
+      TokenType.root,
+    };
 
-    return isLeftValid && isRightValid;
+    // 1. Check standard cases (e.g., 2x, 2(x), (x)y, 2i)
+    if (validLeft.contains(previous) && validRight.contains(current)) {
+      return true;
+    }
+
+    // 2. Handle specific edge cases: e.g., "5! 2" -> 5! * 2
+    // We treat a number following a factorial as implicit multiplication
+    if (previous == TokenType.factorial && current == TokenType.number) {
+      return true;
+    }
+
+    return false;
   }
 
   Expression _power() {
@@ -232,8 +263,12 @@ class Parser {
       return IdentifierExpression(token.lexeme, token.position);
     }
 
+    // FIX: Handle imaginary unit properly
     if (_match(TokenType.imaginaryUnit)) {
-      return NumberLiteral(0, _previous().position); // Will be bound to i
+      final token = _previous();
+      // Return an identifier 'i' instead of NumberLiteral(0)
+      // This will be resolved by the binder to the complex constant
+      return IdentifierExpression('i', token.position);
     }
 
     if (_match(TokenType.leftParen)) {

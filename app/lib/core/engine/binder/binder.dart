@@ -50,7 +50,7 @@ class Binder {
     return switch (type) {
       TokenType.minus => BoundUnaryOperator.negate,
       TokenType.factorial => BoundUnaryOperator.factorial,
-      TokenType.percent => BoundUnaryOperator.percent, // NEW
+      TokenType.percent => BoundUnaryOperator.percent,
       _ => throw ArgumentError('Invalid unary operator: $type'),
     };
   }
@@ -92,6 +92,14 @@ class Binder {
       case IdentifierExpression():
         final symbol = _symbols.lookup(expr.name);
         if (symbol == null) {
+          // Special handling for single-letter variables that might not be defined yet
+          // Allow them to be used (will be defined on first assignment)
+          if (expr.name.length == 1 && RegExp(r'[A-Z]').hasMatch(expr.name)) {
+            // Auto-define single-letter uppercase variables
+            _symbols.define(expr.name, ValueType.any);
+            return BoundVariable(expr.name, ValueType.any, expr.position);
+          }
+
           throw EngineError(
             ErrorType.undefinedVariable,
             'Undefined variable: ${expr.name}',

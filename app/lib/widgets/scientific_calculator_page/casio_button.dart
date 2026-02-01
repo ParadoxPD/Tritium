@@ -11,7 +11,8 @@ class CasioButton extends StatelessWidget {
   final Color textColor;
   final Color shiftColor;
   final Color alphaColor;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool isDisabled;
 
   const CasioButton({
     super.key,
@@ -24,6 +25,7 @@ class CasioButton extends StatelessWidget {
     required this.textColor,
     required this.shiftColor,
     required this.alphaColor,
+    required this.isDisabled,
     required this.onPressed,
   });
 
@@ -64,12 +66,13 @@ class CasioButton extends StatelessWidget {
     }
 
     return Material(
-      color: baseColor,
+      color: isDisabled ? baseColor.withValues(alpha: 0.3) : baseColor,
       borderRadius: BorderRadius.circular(8),
       elevation: 1,
       shadowColor: Colors.black.withValues(alpha: 0.1),
       child: InkWell(
         onTap: onPressed,
+
         borderRadius: BorderRadius.circular(8),
         splashColor: Colors.white.withValues(alpha: 0.2),
         highlightColor: Colors.white.withValues(alpha: 0.1),
@@ -89,7 +92,9 @@ class CasioButton extends StatelessWidget {
                   style: TextStyle(
                     fontSize: _buttonFontSize(label, true),
                     fontWeight: FontWeight.w600,
-                    color: mainLabelColor,
+                    color: isDisabled
+                        ? mainLabelColor.withValues(alpha: 0.3)
+                        : mainLabelColor,
                     height: 1.0, // prevents vertical shrink
                     fontFamilyFallback: const [
                       'Roboto',
@@ -118,7 +123,9 @@ class CasioButton extends StatelessWidget {
                         'Segoe UI Symbol',
                       ],
                       color: isActiveShift
-                          ? shiftColor
+                          ? isDisabled
+                                ? shiftColor.withValues(alpha: 0.3)
+                                : shiftColor
                           : shiftColor.withValues(alpha: 0.6),
                       decoration: isActiveShift
                           ? TextDecoration.underline
@@ -143,9 +150,11 @@ class CasioButton extends StatelessWidget {
                       ],
                       fontWeight: FontWeight.bold,
                       color: isActiveAlpha
-                          ? alphaColor
+                          ? isDisabled
+                                ? alphaColor.withValues(alpha: 0.3)
+                                : alphaColor
                           : alphaColor.withValues(alpha: 0.6),
-                      decoration: isActiveAlpha
+                      decoration: isActiveAlpha && !isDisabled
                           ? TextDecoration.underline
                           : null,
                     ),

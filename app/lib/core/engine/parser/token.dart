@@ -44,6 +44,7 @@ enum TokenType {
   else_,
   for_,
   in_,
+  store,
 
   // Special
   root, // √

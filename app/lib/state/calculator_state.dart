@@ -24,6 +24,7 @@ class CalculatorState extends ChangeNotifier {
   bool isShift = false;
   bool isAlpha = false;
   bool isHyp = false;
+  bool isStoreMode = false;
 
   CalculatorState(this._engine) {
     _loadSettings();
@@ -58,6 +59,19 @@ class CalculatorState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void enterStoreMode() {
+    isStoreMode = true;
+    isShift = false;
+    isAlpha = true;
+    isHyp = false;
+    notifyListeners();
+  }
+
+  void exitStoreMode() {
+    isStoreMode = false;
+    notifyListeners();
+  }
+
   void handleButtonPress({
     required String primary,
     String? shift,
@@ -74,7 +88,26 @@ class CalculatorState extends ChangeNotifier {
       isAlpha = false; // Clear alpha after use
     }
 
+    if (token == "STO") {
+      enterStoreMode();
+      return;
+    }
+
+    if (isStoreMode) {
+      const vars = ['A', 'B', 'C', 'D', 'E', 'F', 'X', 'Y', 'Z', 'M'];
+
+      if (vars.contains(token)) {
+        _insertToken(" → $token");
+        exitStoreMode();
+      }
+      return; // block everything else
+    }
+
     _insertToken(token);
+  }
+
+  void insertAtCursor(String tokens) {
+    _insertToken(tokens);
   }
 
   void evaluate() {
@@ -102,12 +135,25 @@ class CalculatorState extends ChangeNotifier {
 
     if (result is EngineSuccess) {
       _display = result.value.toDisplayString();
+      _logger.info(_display);
       _context = result.context; // Use updated context from engine
     } else if (result is EngineError) {
       _display = 'Error: ${result.message}';
+      _logger.info(_display);
     }
 
     notifyListeners();
+  }
+
+  String getValue(String variable) {
+    final result = _engine.evaluate(variable, _context);
+
+    if (result is EngineSuccess) {
+      _logger.info(_display);
+      _context = result.context; // Use updated context from engine
+      return ': ${result.value.toDisplayString()}';
+    }
+    return '';
   }
 
   void _insertToken(String token) {
@@ -117,6 +163,7 @@ class CalculatorState extends ChangeNotifier {
       'x²' => '^2',
       'x³' => '^3',
       'xⁿ' => '^',
+      '10ˣ' => '10^',
       'sin' => 'sin(',
       'cos' => 'cos(',
       'tan' => 'tan(',
@@ -133,6 +180,8 @@ class CalculatorState extends ChangeNotifier {
       'ln' => 'ln(',
       'Pol' => 'Pol(',
       'Rec' => 'Rec(',
+      'x!' => '!',
+      "x⁻¹" => "^-1",
       _ => token,
     };
     final cursorPos = controller.selection.base.offset;

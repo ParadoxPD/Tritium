@@ -16,9 +16,9 @@ import kotlin.math.sqrt
 class TritiumWidgetDark : AppWidgetProvider() {
 
     override fun onUpdate(
-            context: Context,
-            appWidgetManager: AppWidgetManager,
-            appWidgetIds: IntArray
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray
     ) {
         appWidgetIds.forEach { widgetId -> updateWidget(context, appWidgetManager, widgetId) }
     }
@@ -44,111 +44,112 @@ class TritiumWidgetDark : AppWidgetProvider() {
     private fun setupButtonClicks(context: Context, views: RemoteViews, widgetId: Int) {
         // Number and operator buttons
         val buttons =
-                listOf(
-                        R.id.btn_7 to "7",
-                        R.id.btn_8 to "8",
-                        R.id.btn_9 to "9",
-                        R.id.btn_4 to "4",
-                        R.id.btn_5 to "5",
-                        R.id.btn_6 to "6",
-                        R.id.btn_1 to "1",
-                        R.id.btn_2 to "2",
-                        R.id.btn_3 to "3",
-                        R.id.btn_0 to "0",
-                        R.id.btn_dot to ".",
-                        R.id.btn_power to "^",
-                        R.id.btn_sqrt to "√(",
-                        R.id.btn_lparen to "(",
-                        R.id.btn_rparen to ")",
-                        R.id.btn_multiply to "×",
-                        R.id.btn_divide to "÷",
-                        R.id.btn_add to "+",
-                        R.id.btn_subtract to "-"
-                )
+            listOf(
+                R.id.btn_7 to "7",
+                R.id.btn_8 to "8",
+                R.id.btn_9 to "9",
+                R.id.btn_4 to "4",
+                R.id.btn_5 to "5",
+                R.id.btn_6 to "6",
+                R.id.btn_1 to "1",
+                R.id.btn_2 to "2",
+                R.id.btn_3 to "3",
+                R.id.btn_0 to "0",
+                R.id.btn_dot to ".",
+                R.id.btn_power to "^",
+                R.id.btn_sqrt to "√(",
+                R.id.btn_lparen to "(",
+                R.id.btn_rparen to ")",
+                R.id.btn_multiply to "×",
+                R.id.btn_divide to "÷",
+                R.id.btn_add to "+",
+                R.id.btn_subtract to "-",
+                R.id.btn_factorial to "!",
+            )
 
         buttons.forEach { (buttonId, value) ->
             val intent =
-                    Intent(context, TritiumWidgetDark::class.java).apply {
-                        action = "BUTTON_PRESS"
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                        putExtra("button_value", value)
-                    }
+                Intent(context, TritiumWidgetDark::class.java).apply {
+                    action = "BUTTON_PRESS"
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                    putExtra("button_value", value)
+                }
 
             val uniqueRequestCode = widgetId + buttonId.hashCode()
 
             views.setOnClickPendingIntent(
-                    buttonId,
-                    PendingIntent.getBroadcast(
-                            context,
-                            uniqueRequestCode,
-                            intent,
-                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
+                buttonId,
+                PendingIntent.getBroadcast(
+                    context,
+                    uniqueRequestCode,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
             )
         }
 
         // DEL button
         val delIntent =
-                Intent(context, TritiumWidgetDark::class.java).apply {
-                    action = "BUTTON_DELETE"
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                }
+            Intent(context, TritiumWidgetDark::class.java).apply {
+                action = "BUTTON_DELETE"
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            }
         views.setOnClickPendingIntent(
-                R.id.btn_del,
-                PendingIntent.getBroadcast(
-                        context,
-                        widgetId + R.id.btn_del.hashCode(),
-                        delIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
+            R.id.btn_del,
+            PendingIntent.getBroadcast(
+                context,
+                widgetId + R.id.btn_del.hashCode(),
+                delIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
         )
 
         // AC button
         val acIntent =
-                Intent(context, TritiumWidgetDark::class.java).apply {
-                    action = "BUTTON_CLEAR"
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                }
+            Intent(context, TritiumWidgetDark::class.java).apply {
+                action = "BUTTON_CLEAR"
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            }
         views.setOnClickPendingIntent(
-                R.id.btn_ac,
-                PendingIntent.getBroadcast(
-                        context,
-                        widgetId + R.id.btn_ac.hashCode(),
-                        acIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
+            R.id.btn_ac,
+            PendingIntent.getBroadcast(
+                context,
+                widgetId + R.id.btn_ac.hashCode(),
+                acIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
         )
 
         // Ans button
         val ansIntent =
-                Intent(context, TritiumWidgetDark::class.java).apply {
-                    action = "BUTTON_ANS"
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                }
+            Intent(context, TritiumWidgetDark::class.java).apply {
+                action = "BUTTON_ANS"
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            }
         views.setOnClickPendingIntent(
-                R.id.btn_ans,
-                PendingIntent.getBroadcast(
-                        context,
-                        widgetId + R.id.btn_ans.hashCode(),
-                        ansIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
+            R.id.btn_ans,
+            PendingIntent.getBroadcast(
+                context,
+                widgetId + R.id.btn_ans.hashCode(),
+                ansIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
         )
 
         // Equals button
         val equalsIntent =
-                Intent(context, TritiumWidgetDark::class.java).apply {
-                    action = "BUTTON_EQUALS"
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                }
+            Intent(context, TritiumWidgetDark::class.java).apply {
+                action = "BUTTON_EQUALS"
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            }
         views.setOnClickPendingIntent(
-                R.id.btn_equals,
-                PendingIntent.getBroadcast(
-                        context,
-                        widgetId + R.id.btn_equals.hashCode(),
-                        equalsIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
+            R.id.btn_equals,
+            PendingIntent.getBroadcast(
+                context,
+                widgetId + R.id.btn_equals.hashCode(),
+                equalsIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
         )
     }
 
@@ -156,10 +157,10 @@ class TritiumWidgetDark : AppWidgetProvider() {
         super.onReceive(context, intent)
 
         val widgetId =
-                intent.getIntExtra(
-                        AppWidgetManager.EXTRA_APPWIDGET_ID,
-                        AppWidgetManager.INVALID_APPWIDGET_ID
-                )
+            intent.getIntExtra(
+                AppWidgetManager.EXTRA_APPWIDGET_ID,
+                AppWidgetManager.INVALID_APPWIDGET_ID
+            )
         if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
 
         val prefs = context.getSharedPreferences("TritiumWidget_$widgetId", Context.MODE_PRIVATE)
@@ -171,6 +172,7 @@ class TritiumWidgetDark : AppWidgetProvider() {
                 prefs.edit().putString("input", currentInput + value).apply()
                 updateAllWidgets(context)
             }
+
             "BUTTON_DELETE" -> {
                 val currentInput = prefs.getString("input", "") ?: ""
                 if (currentInput.isNotEmpty()) {
@@ -178,16 +180,19 @@ class TritiumWidgetDark : AppWidgetProvider() {
                 }
                 updateAllWidgets(context)
             }
+
             "BUTTON_CLEAR" -> {
                 prefs.edit().putString("input", "").putString("result", "0").apply()
                 updateAllWidgets(context)
             }
+
             "BUTTON_ANS" -> {
                 val currentInput = prefs.getString("input", "") ?: ""
                 val lastResult = prefs.getString("result", "0") ?: "0"
                 prefs.edit().putString("input", currentInput + lastResult).apply()
                 updateAllWidgets(context)
             }
+
             "BUTTON_EQUALS" -> {
                 val input = prefs.getString("input", "") ?: ""
                 if (input.isNotEmpty()) {
@@ -203,10 +208,10 @@ class TritiumWidgetDark : AppWidgetProvider() {
         return try {
             // Replace visual operators with math operators
             val cleanExpr =
-                    expr.replace("×", "*")
-                            .replace("÷", "/")
-                            .replace("√", "sqrt")
-                            .replace(Regex("(?<=[\\d)])(?=(sqrt|\\())"), "*")
+                expr.replace("×", "*")
+                    .replace("÷", "/")
+                    .replace("√", "sqrt")
+                    .replace(Regex("(?<=[\\d)])(?=(sqrt|\\())"), "*")
 
             val result = calculateBasic(cleanExpr)
 
@@ -249,9 +254,9 @@ class TritiumWidgetDark : AppWidgetProvider() {
             val inner = expression.substring(start + 5, end)
             val sqrtResult = sqrt(calculateBasic(inner))
             expression =
-                    expression.substring(0, start) +
-                            formatForCalc(sqrtResult) +
-                            if (end + 1 < expression.length) expression.substring(end + 1) else ""
+                expression.substring(0, start) +
+                        formatForCalc(sqrtResult) +
+                        if (end + 1 < expression.length) expression.substring(end + 1) else ""
         }
 
         // 2. Handle Parentheses
@@ -265,12 +270,37 @@ class TritiumWidgetDark : AppWidgetProvider() {
             val inner = expression.substring(start + 1, end)
             val result = calculateBasic(inner)
             expression =
-                    expression.substring(0, start) +
-                            formatForCalc(result) +
-                            expression.substring(end + 1)
+                expression.substring(0, start) +
+                        formatForCalc(result) +
+                        expression.substring(end + 1)
         }
 
-        // 3. Handle Powers
+        // 3. Handle Factorial (before powers - highest precedence for postfix operator)
+        while (expression.contains("!")) {
+            val idx = expression.indexOf("!")
+            val leftNum = extractLeftNumber(expression, idx)
+
+            val value = leftNum.first.toDouble()
+            val fact = factorial(value)
+
+            var replacement = formatForCalc(fact)
+
+            // Check for implicit multiplication after factorial
+            val nextIdx = idx + 1
+            if (nextIdx < expression.length) {
+                val nextChar = expression[nextIdx]
+                if (nextChar.isDigit() || nextChar == '(' || expression.startsWith("sqrt", nextIdx)) {
+                    replacement += "*"
+                }
+            }
+
+            expression =
+                expression.substring(0, leftNum.second) +
+                        replacement +
+                        expression.substring(idx + 1)
+        }
+
+        // 4. Handle Powers
         while (expression.contains("^")) {
             val idx = expression.lastIndexOf("^") // Right associative roughly
             val leftNum = extractLeftNumber(expression, idx)
@@ -278,37 +308,37 @@ class TritiumWidgetDark : AppWidgetProvider() {
             val result = leftNum.first.toDouble().pow(rightNum.first.toDouble())
 
             expression =
-                    expression.substring(0, leftNum.second) +
-                            formatForCalc(result) +
-                            expression.substring(rightNum.second)
+                expression.substring(0, leftNum.second) +
+                        formatForCalc(result) +
+                        expression.substring(rightNum.second)
         }
 
-        // 4. Handle Multiply / Divide
+        // 5. Handle Multiply / Divide
         while (expression.contains("*") || expression.contains("/")) {
             val mulIdx = expression.indexOf("*")
             val divIdx = expression.indexOf("/")
             val idx =
-                    if (mulIdx == -1) divIdx
-                    else if (divIdx == -1) mulIdx else minOf(mulIdx, divIdx)
+                if (mulIdx == -1) divIdx
+                else if (divIdx == -1) mulIdx else minOf(mulIdx, divIdx)
 
             val op = expression[idx]
             val leftNum = extractLeftNumber(expression, idx)
             val rightNum = extractRightNumber(expression, idx)
 
             val result =
-                    if (op == '*') {
-                        leftNum.first.toDouble() * rightNum.first.toDouble()
-                    } else {
-                        leftNum.first.toDouble() / rightNum.first.toDouble()
-                    }
+                if (op == '*') {
+                    leftNum.first.toDouble() * rightNum.first.toDouble()
+                } else {
+                    leftNum.first.toDouble() / rightNum.first.toDouble()
+                }
 
             expression =
-                    expression.substring(0, leftNum.second) +
-                            formatForCalc(result) +
-                            expression.substring(rightNum.second)
+                expression.substring(0, leftNum.second) +
+                        formatForCalc(result) +
+                        expression.substring(rightNum.second)
         }
 
-        // 5. Handle Addition / Subtraction
+        // 6. Handle Addition / Subtraction
         // Standard scan from left to right to handle e.g. 5 - 3 + 2 correctly
         var result = 0.0
         var currentNum = ""
@@ -331,7 +361,7 @@ class TritiumWidgetDark : AppWidgetProvider() {
                 currentNum += c
                 // If next is + or -, consume it
                 if (i + 1 < expression.length &&
-                                (expression[i + 1] == '+' || expression[i + 1] == '-')
+                    (expression[i + 1] == '+' || expression[i + 1] == '-')
                 ) {
                     currentNum += expression[i + 1]
                     i++
@@ -378,14 +408,35 @@ class TritiumWidgetDark : AppWidgetProvider() {
         return BigDecimal(d).toPlainString()
     }
 
+    private fun factorial(n: Double): Double {
+        if (n < 0) throw IllegalArgumentException("Negative factorial")
+        if (n % 1.0 != 0.0) throw IllegalArgumentException("Non-integer factorial")
+
+        val k = n.toLong()
+
+        return if (k <= 20) {
+            var res = 1.0
+            for (i in 2..k) res *= i
+            res
+        } else {
+            // Stirling's approximation with correction term
+            val x = k.toDouble()
+            sqrt(2 * Math.PI * x) *
+                    (x / Math.E).pow(x) *
+                    (1 + 1.0 / (12 * x) + 1.0 / (288 * x * x))
+        }
+    }
+
+
     private fun extractLeftNumber(expr: String, opIdx: Int): Pair<String, Int> {
         var start = opIdx - 1
         // Scan back for digits, dots, or 'E' (scientific notation support)
         while (start >= 0 &&
-                (expr[start].isDigit() ||
-                        expr[start] == '.' ||
-                        expr[start] == 'E' ||
-                        expr[start] == 'e')) {
+            (expr[start].isDigit() ||
+                    expr[start] == '.' ||
+                    expr[start] == 'E' ||
+                    expr[start] == 'e')
+        ) {
             start--
         }
         // Handle negative sign if it belongs to the number
@@ -407,7 +458,8 @@ class TritiumWidgetDark : AppWidgetProvider() {
             end++
         }
         while (end < expr.length &&
-                (expr[end].isDigit() || expr[end] == '.' || expr[end] == 'E' || expr[end] == 'e')) {
+            (expr[end].isDigit() || expr[end] == '.' || expr[end] == 'E' || expr[end] == 'e')
+        ) {
             // Handle scientific notation e.g. 1.2E-5
             if ((expr[end] == 'E' || expr[end] == 'e') && end + 1 < expr.length) {
                 if (expr[end + 1] == '-' || expr[end + 1] == '+') {
@@ -425,9 +477,9 @@ class TritiumWidgetDark : AppWidgetProvider() {
 
         // Update Light Widgets
         val lightIds =
-                appWidgetManager.getAppWidgetIds(
-                        android.content.ComponentName(context, TritiumWidgetLight::class.java)
-                )
+            appWidgetManager.getAppWidgetIds(
+                android.content.ComponentName(context, TritiumWidgetLight::class.java)
+            )
         lightIds.forEach { id ->
             val views = RemoteViews(context.packageName, R.layout.tritium_widget_light)
             val prefs = context.getSharedPreferences("TritiumWidget_$id", Context.MODE_PRIVATE)
@@ -440,9 +492,9 @@ class TritiumWidgetDark : AppWidgetProvider() {
 
         // Update Dark Widgets
         val darkIds =
-                appWidgetManager.getAppWidgetIds(
-                        android.content.ComponentName(context, TritiumWidgetDark::class.java)
-                )
+            appWidgetManager.getAppWidgetIds(
+                android.content.ComponentName(context, TritiumWidgetDark::class.java)
+            )
         darkIds.forEach { updateWidget(context, appWidgetManager, it) }
     }
 }

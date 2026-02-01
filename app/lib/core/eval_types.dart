@@ -205,6 +205,25 @@ class ListValue extends Value {
   }
 }
 
+class NumberValueSci extends Value {
+  final double mantissa;
+  final int exponent;
+
+  NumberValueSci(this.mantissa, this.exponent);
+
+  @override
+  String toDisplayString() =>
+      exponent > 0 ? "${mantissa}e+$exponent" : "$mantissa";
+
+  @override
+  double? toDouble() => null;
+
+  @override
+  ValueType type() {
+    return ValueType.number;
+  }
+}
+
 // ============================================================================
 // This architecture supports:
 // - All current features (scientific calc, matrices, complex numbers)

@@ -50,7 +50,7 @@
         android:columnOrderPreserved="false">
 
         <!-- Row 1 -->
-        <Button android:id="@+id/btn_placeholder" style="@style/WidgetButtonDark" android:text="" />
+        <Button android:id="@+id/btn_factorial" style="@style/WidgetButtonDark" android:text="!" />
         <Button android:id="@+id/btn_power" style="@style/WidgetButtonDark" android:text="^" />
         <Button android:id="@+id/btn_sqrt" style="@style/WidgetButtonDark" android:text="√" />
         <Button android:id="@+id/btn_lparen" style="@style/WidgetButtonDark" android:text="(" />

@@ -9,7 +9,7 @@ import 'package:app/core/eval_context.dart';
 class CoreMathModule extends LibraryModule {
   @override
   Map<String, Value> get constants => {
-    'pi': NumberValue(math.pi),
+    'π': NumberValue(math.pi),
     'e': NumberValue(math.e),
     'i': const ComplexValue(0, 1),
   };

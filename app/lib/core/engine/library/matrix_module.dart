@@ -31,14 +31,16 @@ class MatrixMathModule extends LibraryModule {
   Value _toMatrixOp(List<Value> args, Value Function(MatrixValue) op) {
     if (args[0] is! MatrixValue) {
       throw RuntimeError(
-        'Function expects a matrix, got ${args[0].runtimeType}',
+        message: 'Function expects a matrix, got ${args[0].runtimeType}',
       );
     }
     return op(args[0] as MatrixValue);
   }
 
   Value _trace(MatrixValue m) {
-    if (m.rows != m.cols) throw RuntimeError('Trace requires a square matrix');
+    if (m.rows != m.cols) {
+      throw RuntimeError(message: 'Trace requires a square matrix');
+    }
     double sum = 0;
     for (int i = 0; i < m.rows; i++) {
       sum += m.data[i][i];
@@ -91,7 +93,7 @@ class MatrixMathModule extends LibraryModule {
 
   Value _inverse(MatrixValue m) {
     if (m.rows != m.cols) {
-      throw RuntimeError('Matrix must be square for inverse');
+      throw RuntimeError(message: 'Matrix must be square for inverse');
     }
     int n = m.rows;
     List<List<double>> aug = List.generate(n, (i) {
@@ -101,7 +103,7 @@ class MatrixMathModule extends LibraryModule {
     for (int i = 0; i < n; i++) {
       double pivot = aug[i][i];
       if (pivot.abs() < 1e-10) {
-        throw RuntimeError('Matrix is singular and cannot be inverted');
+        throw RuntimeError(message: 'Matrix is singular and cannot be inverted');
       }
       for (int j = 0; j < 2 * n; j++) {
         aug[i][j] /= pivot;
@@ -120,7 +122,7 @@ class MatrixMathModule extends LibraryModule {
 
   Value _eigenvalues(MatrixValue m) {
     if (m.rows != m.cols) {
-      throw RuntimeError('Eigenvalues require a square matrix');
+      throw RuntimeError(message: 'Eigenvalues require a square matrix');
     }
 
     MatrixValue currentA = m;
@@ -191,7 +193,7 @@ class MatrixMathModule extends LibraryModule {
 
   Value _determinant(MatrixValue m) {
     if (m.rows != m.cols) {
-      throw RuntimeError('Determinant requires square matrix');
+      throw RuntimeError(message: 'Determinant requires square matrix');
     }
     return NumberValue(_det(m.data));
   }

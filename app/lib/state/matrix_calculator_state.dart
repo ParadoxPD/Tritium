@@ -94,7 +94,7 @@ class MatrixCalculatorState extends ChangeNotifier {
     if (result is EngineSuccess) {
       _processEngineValue(result.value);
     } else if (result is EngineError) {
-      error = result.message;
+      error = result.toString();
     }
 
     notifyListeners();

@@ -27,7 +27,7 @@ class EngineError extends EngineResult {
 
   @override
   String toString() {
-    final buf = StringBuffer(message);
+    final buf = StringBuffer('[${type.name}] $message');
     if (position != null) buf.write(' at position $position');
     if (hint != null) buf.write('\nHint: $hint');
     return buf.toString();

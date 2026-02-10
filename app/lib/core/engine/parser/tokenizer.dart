@@ -12,7 +12,7 @@ class Tokenizer {
   int _start = 0;
   int _current = 0;
 
-  LoggerService logger = LoggerService();
+  final LoggerService logger = LoggerService();
 
   Tokenizer(this.input);
 
@@ -55,6 +55,9 @@ class Tokenizer {
       case ';':
         _addToken(TokenType.semicolon);
         break;
+      case ':':
+        _addToken(TokenType.colon);
+        break;
       case '+':
         _addToken(TokenType.plus);
         break;
@@ -84,8 +87,8 @@ class Tokenizer {
         _addToken(_match('=') ? TokenType.notEquals : TokenType.factorial);
         break;
       case '=':
-        if (_match('=')) _addToken(TokenType.equals);
-        // Add single '=' assignment here if your engine supports it
+        _addToken(TokenType.equals);
+        _match('=');
         break;
       case '<':
         _addToken(_match('=') ? TokenType.lessOrEqual : TokenType.lessThan);
@@ -120,7 +123,6 @@ class Tokenizer {
           // Handles leading decimals like .5
           _number();
         } else {
-          // Instead of returning null, throw a specific error
           logger.error('Unexpected character "$c" at position $_current');
           throw Exception('Unexpected character "$c" at position $_current');
         }

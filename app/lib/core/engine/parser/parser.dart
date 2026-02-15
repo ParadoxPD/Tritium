@@ -14,8 +14,10 @@ class Parser {
   ASTNode parse() {
     try {
       return _statement();
+    } on EngineError {
+      rethrow;
     } catch (e) {
-      logger.error(e.toString());
+      logger.error('Parser failure', e);
       throw EngineError(
         ErrorType.invalidSyntax,
         e.toString(),
@@ -95,7 +97,7 @@ class Parser {
   Expression _multiplicative() {
     var expr = _implicitMultiplication();
 
-    while (_match(TokenType.multiply, TokenType.divide)) {
+    while (_match(TokenType.multiply, TokenType.divide, TokenType.percent)) {
       final operator = _previous().type;
       final right = _implicitMultiplication();
       expr = BinaryExpression(expr, operator, right, expr.position);
@@ -184,7 +186,8 @@ class Parser {
     while (true) {
       if (_match(TokenType.factorial)) {
         expr = UnaryExpression(TokenType.factorial, expr, _previous().position);
-      } else if (_match(TokenType.percent)) {
+      } else if (_check(TokenType.percent) && _canApplyUnaryPercent()) {
+        _advance();
         expr = UnaryExpression(TokenType.percent, expr, _previous().position);
       } else {
         break;
@@ -449,5 +452,27 @@ class Parser {
       message,
       position: _peek().position,
     );
+  }
+
+  bool _canApplyUnaryPercent() {
+    if (_current + 1 >= tokens.length) return true;
+
+    // Unary percentage is terminal/postfix: 50%, 50%+1, (x)%.
+    // If the next token can start an expression (number, identifier, (, [ ...),
+    // this '%' should be interpreted as binary modulo instead.
+    final next = tokens[_current + 1].type;
+    const binaryFollowers = {
+      TokenType.number,
+      TokenType.identifier,
+      TokenType.leftParen,
+      TokenType.leftBracket,
+      TokenType.leftBrace,
+      TokenType.imaginaryUnit,
+      TokenType.root,
+      TokenType.plus,
+      TokenType.minus,
+    };
+
+    return !binaryFollowers.contains(next);
   }
 }

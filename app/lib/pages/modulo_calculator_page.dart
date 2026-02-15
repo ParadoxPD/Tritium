@@ -13,23 +13,168 @@ class ModuloCalculatorPage extends StatefulWidget {
 }
 
 class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
-  static const List<int> modulusOptions = [
-    2,
-    3,
-    5,
-    7,
-    11,
-    13,
-    17,
-    19,
-    23,
-    29,
-    31,
-    37,
-    41,
-    43,
-    47,
-  ];
+  final TextEditingController _modulusController = TextEditingController();
+  final FocusNode _modulusFocusNode = FocusNode();
+  bool _didInitModulus = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didInitModulus) return;
+    final state = context.read<ModuloCalculatorState>();
+    _modulusController.text = state.modulus.toString();
+    _didInitModulus = true;
+  }
+
+  @override
+  void dispose() {
+    _modulusController.dispose();
+    _modulusFocusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _showSingleIntDialog(
+    BuildContext context, {
+    required String title,
+    required String label,
+    required String initialValue,
+    required void Function(int) onConfirm,
+  }) async {
+    final controller = TextEditingController(text: initialValue);
+    final state = context.read<ModuloCalculatorState>();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: label),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = int.tryParse(controller.text.trim());
+              if (value == null) {
+                state.setError('$label must be an integer');
+                return;
+              }
+              Navigator.of(ctx).pop();
+              onConfirm(value);
+            },
+            child: const Text('Run'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showTwoIntDialog(
+    BuildContext context, {
+    required String title,
+    required String firstLabel,
+    required String secondLabel,
+    required String firstInitial,
+    required String secondInitial,
+    required void Function(int, int) onConfirm,
+  }) async {
+    final firstController = TextEditingController(text: firstInitial);
+    final secondController = TextEditingController(text: secondInitial);
+    final state = context.read<ModuloCalculatorState>();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: firstController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: firstLabel),
+              autofocus: true,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: secondController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: secondLabel),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final a = int.tryParse(firstController.text.trim());
+              final b = int.tryParse(secondController.text.trim());
+              if (a == null || b == null) {
+                state.setError('Both values must be integers');
+                return;
+              }
+              Navigator.of(ctx).pop();
+              onConfirm(a, b);
+            },
+            child: const Text('Run'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showMatrixDialog(BuildContext context) async {
+    final controller = TextEditingController(text: '[[1,2],[3,5]]');
+    final state = context.read<ModuloCalculatorState>();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Matrix Inverse mod m'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Enter a square integer matrix literal, e.g. [[1,2],[3,5]]',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(labelText: 'Matrix'),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final matrixLiteral = controller.text.trim();
+              if (matrixLiteral.isEmpty) {
+                state.setError('Matrix input cannot be empty');
+                return;
+              }
+              Navigator.of(ctx).pop();
+              state.calculateMatrixInverseModulo(matrixLiteral);
+            },
+            child: const Text('Run'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,39 +202,39 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.panel,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: theme.subtle),
-                    ),
-                    child: DropdownButton<int>(
-                      value: state.modulus,
-                      underline: const SizedBox(),
-                      isExpanded: true,
-                      dropdownColor: theme.panel,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: theme.foreground,
+                  child: TextField(
+                    controller: _modulusController,
+                    focusNode: _modulusFocusNode,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      prefixText: 'mod ',
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
                       ),
-                      items: modulusOptions.map((mod) {
-                        return DropdownMenuItem(
-                          value: mod,
-                          child: Text(
-                            'mod $mod',
-                            style: TextStyle(color: theme.foreground),
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) state.setModulus(value);
-                      },
+                      filled: true,
+                      fillColor: theme.panel,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: theme.subtle),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(color: theme.primary),
+                      ),
                     ),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: theme.foreground,
+                    ),
+                    onChanged: state.updateModulusFromInput,
+                    onSubmitted: state.setModulusFromInput,
+                    onTapOutside: (_) {
+                      _modulusFocusNode.unfocus();
+                      state.setModulusFromInput(_modulusController.text);
+                    },
                   ),
                 ),
               ],
@@ -168,8 +313,14 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: _buildButton(
-                        'mod',
-                        () => state.reduceModulo(),
+                        'φ(n)',
+                        () => _showSingleIntDialog(
+                          context,
+                          title: 'Euler Totient',
+                          label: 'n',
+                          initialValue: state.display,
+                          onConfirm: state.calculateEulerTotientFor,
+                        ),
                         theme.accent,
                         theme,
                       ),
@@ -311,29 +462,96 @@ class _ModuloCalculatorPageState extends State<ModuloCalculatorPage> {
                     _buildAdvancedButton(
                       'a⁻¹ mod m',
                       Icons.flip,
-                      () => state.calculateModularInverse(),
+                      () => _showSingleIntDialog(
+                        context,
+                        title: 'Modular Inverse',
+                        label: 'a',
+                        initialValue: state.display,
+                        onConfirm: state.calculateModularInverseFor,
+                      ),
                       theme.secondary,
+                      theme,
+                    ),
+                    _buildAdvancedButton(
+                      'a^b mod m',
+                      Icons.exposure,
+                      () => _showTwoIntDialog(
+                        context,
+                        title: 'Modular Power',
+                        firstLabel: 'base (a)',
+                        secondLabel: 'exponent (b)',
+                        firstInitial: state.display,
+                        secondInitial: '2',
+                        onConfirm: state.calculateModPowerFor,
+                      ),
+                      theme.primary,
                       theme,
                     ),
                     _buildAdvancedButton(
                       'GCD',
                       Icons.calculate,
-                      () => state.calculateGCD(),
+                      () => _showTwoIntDialog(
+                        context,
+                        title: 'Greatest Common Divisor',
+                        firstLabel: 'a',
+                        secondLabel: 'b',
+                        firstInitial: state.display,
+                        secondInitial: '0',
+                        onConfirm: state.calculateGCDFor,
+                      ),
                       theme.accent,
                       theme,
                     ),
                     _buildAdvancedButton(
                       'LCM',
                       Icons.functions,
-                      () => state.calculateLCM(),
+                      () => _showTwoIntDialog(
+                        context,
+                        title: 'Least Common Multiple',
+                        firstLabel: 'a',
+                        secondLabel: 'b',
+                        firstInitial: state.display,
+                        secondInitial: '0',
+                        onConfirm: state.calculateLCMFor,
+                      ),
                       theme.warning,
                       theme,
                     ),
                     _buildAdvancedButton(
                       'Ext GCD',
                       Icons.scatter_plot,
-                      () => state.calculateExtendedGCD(),
+                      () => _showTwoIntDialog(
+                        context,
+                        title: 'Extended GCD',
+                        firstLabel: 'a',
+                        secondLabel: 'b',
+                        firstInitial: state.display,
+                        secondInitial: '0',
+                        onConfirm: state.calculateExtendedGCDFor,
+                      ),
                       theme.error,
+                      theme,
+                    ),
+                    _buildAdvancedButton(
+                      'Congruence',
+                      Icons.rule,
+                      () => _showTwoIntDialog(
+                        context,
+                        title: 'Check Congruence',
+                        firstLabel: 'a',
+                        secondLabel: 'b',
+                        firstInitial: state.display,
+                        secondInitial: '0',
+                        onConfirm: state.checkCongruenceFor,
+                      ),
+                      theme.secondary,
+                      theme,
+                    ),
+                    _buildAdvancedButton(
+                      'Matrix Inv',
+                      Icons.grid_on,
+                      () => _showMatrixDialog(context),
+                      theme.primary,
                       theme,
                     ),
                   ],

@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:app/core/engine/binder/bound_ast.dart';
 import 'package:app/core/engine/evaluator/runtime_errors.dart';
 import 'package:app/core/engine/library/standard_library.dart';
+import 'package:app/core/engine_result.dart';
 import 'package:app/core/eval_context.dart';
 import 'package:app/core/eval_types.dart';
 
@@ -33,7 +34,10 @@ class Evaluator {
     } else if (node is BoundStatement) {
       return _evaluateStatement(node);
     }
-    throw RuntimeError('Unknown bound node type: ${node.runtimeType}');
+    throw RuntimeError(
+      message: 'Unknown bound node type: ${node.runtimeType}',
+      type: ErrorType.unknown,
+    );
   }
 
   void setVariable(String name, Value value) {
@@ -67,7 +71,11 @@ class Evaluator {
       case BoundVariable():
         final value = _variables[expr.name];
         if (value == null) {
-          throw RuntimeError('Undefined variable: ${expr.name}');
+          throw RuntimeError(
+            message: 'Undefined variable: ${expr.name}',
+            type: ErrorType.undefinedVariable,
+            position: expr.position,
+          );
         }
         return value;
 
@@ -103,9 +111,6 @@ class Evaluator {
         } else {
           return _evaluateExpression(expr.elseBranch);
         }
-
-      default:
-        throw RuntimeError('Unknown expression type: ${expr.runtimeType}');
     }
   }
 
@@ -118,9 +123,6 @@ class Evaluator {
         final value = _evaluateExpression(stmt.value);
         _variables[stmt.name] = value;
         return value;
-
-      default:
-        throw RuntimeError('Unknown statement type: ${stmt.runtimeType}');
     }
   }
 
@@ -163,7 +165,10 @@ class Evaluator {
     }
     if (a is MatrixValue && b is MatrixValue) return _addMatrices(a, b);
     if (a is VectorValue && b is VectorValue) return _addVectors(a, b);
-    throw RuntimeError('Cannot add ${a.runtimeType} and ${b.runtimeType}');
+    throw RuntimeError(
+      message: 'Cannot add ${a.runtimeType} and ${b.runtimeType}',
+      type: ErrorType.typeMismatch,
+    );
   }
 
   Value _subtract(Value a, Value b) {
@@ -176,7 +181,10 @@ class Evaluator {
       return ComplexValue(ca.real - cb.real, ca.imaginary - cb.imaginary);
     }
     if (a is MatrixValue && b is MatrixValue) return _subtractMatrices(a, b);
-    throw RuntimeError('Cannot subtract ${a.runtimeType} and ${b.runtimeType}');
+    throw RuntimeError(
+      message: 'Cannot subtract ${a.runtimeType} and ${b.runtimeType}',
+      type: ErrorType.typeMismatch,
+    );
   }
 
   Value _multiply(Value a, Value b) {
@@ -199,24 +207,41 @@ class Evaluator {
     }
 
     if (a is MatrixValue && b is MatrixValue) return _multiplyMatrices(a, b);
-    throw RuntimeError('Cannot multiply ${a.runtimeType} and ${b.runtimeType}');
+    throw RuntimeError(
+      message: 'Cannot multiply ${a.runtimeType} and ${b.runtimeType}',
+      type: ErrorType.typeMismatch,
+    );
   }
 
   Value _divide(Value a, Value b) {
     if (a is NumberValue && b is NumberValue) {
-      if (b.value == 0) throw RuntimeError('Division by zero');
+      if (b.value == 0) {
+        throw RuntimeError(
+          message: 'Division by zero',
+          type: ErrorType.divisionByZero,
+        );
+      }
       return NumberValue(a.value / b.value);
     }
     if (a is ComplexValue || b is ComplexValue) {
       final ca = _toComplex(a);
       final cb = _toComplex(b);
       final denom = cb.real * cb.real + cb.imaginary * cb.imaginary;
+      if (denom == 0) {
+        throw RuntimeError(
+          message: 'Division by zero complex number',
+          type: ErrorType.divisionByZero,
+        );
+      }
       return ComplexValue(
         (ca.real * cb.real + ca.imaginary * cb.imaginary) / denom,
         (ca.imaginary * cb.real - ca.real * cb.imaginary) / denom,
       );
     }
-    throw RuntimeError('Cannot divide ${a.runtimeType} by ${b.runtimeType}');
+    throw RuntimeError(
+      message: 'Cannot divide ${a.runtimeType} by ${b.runtimeType}',
+      type: ErrorType.typeMismatch,
+    );
   }
 
   Value _power(Value a, Value b) {
@@ -224,16 +249,27 @@ class Evaluator {
       return NumberValue(math.pow(a.value, b.value).toDouble());
     }
     throw RuntimeError(
-      'Cannot raise ${a.runtimeType} to power of ${b.runtimeType}',
+      message: 'Cannot raise ${a.runtimeType} to power of ${b.runtimeType}',
+      type: ErrorType.typeMismatch,
     );
   }
 
   Value _modulo(Value a, Value b) {
     if (a is NumberValue && b is NumberValue) {
-      return NumberValue(a.value % b.value);
+      if (b.value == 0) {
+        throw RuntimeError(
+          message: 'Modulo by zero is undefined',
+          type: ErrorType.divisionByZero,
+          hint: 'Use a non-zero modulus.',
+        );
+      }
+      final modulus = b.value.abs();
+      final remainder = ((a.value % modulus) + modulus) % modulus;
+      return NumberValue(remainder);
     }
     throw RuntimeError(
-      'Cannot take modulo of ${a.runtimeType} and ${b.runtimeType}',
+      message: 'Cannot take modulo of ${a.runtimeType} and ${b.runtimeType}',
+      type: ErrorType.typeMismatch,
     );
   }
 
@@ -250,20 +286,34 @@ class Evaluator {
 
   Value _percent(Value v) {
     if (v is NumberValue) return NumberValue(v.value / 100.0);
-    throw RuntimeError('Percentage requires a number');
+    throw RuntimeError(
+      message: 'Percentage requires a number',
+      type: ErrorType.typeMismatch,
+    );
   }
 
   Value _negate(Value v) {
     if (v is NumberValue) return NumberValue(-v.value);
     if (v is ComplexValue) return ComplexValue(-v.real, -v.imaginary);
-    throw RuntimeError('Cannot negate ${v.runtimeType}');
+    throw RuntimeError(
+      message: 'Cannot negate ${v.runtimeType}',
+      type: ErrorType.typeMismatch,
+    );
   }
 
   Value _factorial(Value v) {
-    if (v is! NumberValue) throw RuntimeError('Factorial requires a number');
+    if (v is! NumberValue) {
+      throw RuntimeError(
+        message: 'Factorial requires a number',
+        type: ErrorType.typeMismatch,
+      );
+    }
     final n = v.value.toInt();
     if (n < 0) {
-      throw RuntimeError('Factorial requires non-negative integer');
+      throw RuntimeError(
+        message: 'Factorial requires non-negative integer',
+        type: ErrorType.domainError,
+      );
     }
 
     if (n == v.value) {
@@ -290,24 +340,46 @@ class Evaluator {
       final mag = math.sqrt(v.real * v.real + v.imaginary * v.imaginary);
       return NumberValue(mag);
     }
-    throw RuntimeError('Cannot take absolute value of ${v.runtimeType}');
+    throw RuntimeError(
+      message: 'Cannot take absolute value of ${v.runtimeType}',
+      type: ErrorType.typeMismatch,
+    );
   }
 
   Value _evaluateFunctionCall(BoundFunctionCall call) {
     final fn = _builtins[call.functionName];
     if (fn == null) {
-      throw RuntimeError('Unknown function: ${call.functionName}');
+      throw RuntimeError(
+        message: 'Unknown function: ${call.functionName}',
+        type: ErrorType.undefinedFunction,
+        position: call.position,
+      );
     }
 
     final args = call.arguments.map(_evaluateExpression).toList();
     if (args.length != fn.arity) {
       throw RuntimeError(
-        '${call.functionName} expects ${fn.arity} arguments, got ${args.length}',
+        message:
+            '${call.functionName} expects ${fn.arity} arguments, got ${args.length}',
+        type: ErrorType.wrongArgumentCount,
+        position: call.position,
       );
     }
 
     // Pass the current context to the function
-    return fn.execute(args, _currentContext);
+    try {
+      return fn.execute(args, _currentContext);
+    } on RuntimeError {
+      rethrow;
+    } catch (e) {
+      throw RuntimeError(
+        message: 'Function ${call.functionName} failed',
+        type: ErrorType.runtime,
+        operation: call.functionName,
+        position: call.position,
+        cause: e,
+      );
+    }
   }
 
   Value _evaluateRoot(BoundRoot root) {
@@ -317,13 +389,23 @@ class Evaluator {
         : NumberValue(2);
 
     if (radicand is! NumberValue) {
-      throw RuntimeError('Root requires numeric radicand');
+      throw RuntimeError(
+        message: 'Root requires numeric radicand',
+        type: ErrorType.typeMismatch,
+        position: root.position,
+      );
     }
 
     final n = index.value;
     final x = radicand.value;
 
-    if (n == 0) throw RuntimeError('0th root is undefined');
+    if (n == 0) {
+      throw RuntimeError(
+        message: '0th root is undefined',
+        type: ErrorType.domainError,
+        position: root.position,
+      );
+    }
 
     if (x < 0 && n % 2 == 0) {
       return ComplexValue(0, math.pow(x.abs(), 1 / n).toDouble());
@@ -337,7 +419,11 @@ class Evaluator {
       return row.map((e) {
         final v = _evaluateExpression(e);
         if (v is! NumberValue) {
-          throw RuntimeError('Matrix elements must be numbers');
+          throw RuntimeError(
+            message: 'Matrix elements must be numbers',
+            type: ErrorType.typeMismatch,
+            position: e.position,
+          );
         }
         return v.value;
       }).toList();
@@ -349,7 +435,11 @@ class Evaluator {
     final components = vec.components.map((e) {
       final v = _evaluateExpression(e);
       if (v is! NumberValue) {
-        throw RuntimeError('Vector components must be numbers');
+        throw RuntimeError(
+          message: 'Vector components must be numbers',
+          type: ErrorType.typeMismatch,
+          position: e.position,
+        );
       }
       return v.value;
     }).toList();
@@ -367,12 +457,18 @@ class Evaluator {
   ComplexValue _toComplex(Value v) {
     if (v is ComplexValue) return v;
     if (v is NumberValue) return ComplexValue(v.value, 0);
-    throw RuntimeError('Cannot convert ${v.runtimeType} to complex');
+    throw RuntimeError(
+      message: 'Cannot convert ${v.runtimeType} to complex',
+      type: ErrorType.typeMismatch,
+    );
   }
 
   MatrixValue _addMatrices(MatrixValue a, MatrixValue b) {
     if (a.rows != b.rows || a.cols != b.cols) {
-      throw RuntimeError('Matrix dimensions must match for addition');
+      throw RuntimeError(
+        message: 'Matrix dimensions must match for addition',
+        type: ErrorType.dimensionMismatch,
+      );
     }
     final result = List.generate(
       a.rows,
@@ -383,7 +479,10 @@ class Evaluator {
 
   VectorValue _addVectors(VectorValue a, VectorValue b) {
     if (a.dimension != b.dimension) {
-      throw RuntimeError('Vector dimensions must match');
+      throw RuntimeError(
+        message: 'Vector dimensions must match',
+        type: ErrorType.dimensionMismatch,
+      );
     }
     final result = List.generate(
       a.dimension,
@@ -394,7 +493,10 @@ class Evaluator {
 
   MatrixValue _multiplyMatrices(MatrixValue a, MatrixValue b) {
     if (a.cols != b.rows) {
-      throw RuntimeError('Invalid matrix dimensions for multiplication');
+      throw RuntimeError(
+        message: 'Invalid matrix dimensions for multiplication',
+        type: ErrorType.dimensionMismatch,
+      );
     }
     final result = List.generate(a.rows, (i) {
       return List.generate(b.cols, (j) {
@@ -410,7 +512,10 @@ class Evaluator {
 
   MatrixValue _subtractMatrices(MatrixValue a, MatrixValue b) {
     if (a.rows != b.rows || a.cols != b.cols) {
-      throw RuntimeError('Matrix dimensions must match for subtraction');
+      throw RuntimeError(
+        message: 'Matrix dimensions must match for subtraction',
+        type: ErrorType.dimensionMismatch,
+      );
     }
     final result = List.generate(
       a.rows,
@@ -436,7 +541,10 @@ class Evaluator {
 
   BooleanValue _compare(Value a, Value b, bool Function(double, double) op) {
     if (a is! NumberValue || b is! NumberValue) {
-      throw RuntimeError('Comparison requires numbers');
+      throw RuntimeError(
+        message: 'Comparison requires numbers',
+        type: ErrorType.typeMismatch,
+      );
     }
     return BooleanValue(op(a.value, b.value));
   }

@@ -3,6 +3,7 @@ import 'package:app/core/engine.dart';
 import 'package:app/core/engine_result.dart';
 import 'package:app/core/eval_context.dart';
 import 'package:app/core/eval_types.dart';
+import 'package:app/services/logging_service.dart';
 
 enum ModuloOperation {
   add,
@@ -19,6 +20,7 @@ enum ModuloOperation {
 class ModuloCalculatorState extends ChangeNotifier {
   final EvaluationEngine _engine;
   final EvalContext _context = const EvalContext();
+  final LoggerService _logger = LoggerService();
 
   // Calculator display and input
   String _display = '0';
@@ -44,6 +46,11 @@ class ModuloCalculatorState extends ChangeNotifier {
   String? get result => _result;
   String? get error => _error;
   String? get message => _message;
+
+  void setError(String message) {
+    _error = message;
+    notifyListeners();
+  }
 
   // --- Calculator Input Methods ---
 
@@ -104,9 +111,33 @@ class ModuloCalculatorState extends ChangeNotifier {
   void setModulus(int mod) {
     if (mod > 0) {
       _modulus = mod;
+      _logger.debug('Modulo calculator modulus updated to $_modulus');
       _clearResults();
       notifyListeners();
     }
+  }
+
+  void setModulusFromInput(String input) {
+    _trySetModulusFromInput(input, strict: true);
+  }
+
+  void updateModulusFromInput(String input) {
+    _trySetModulusFromInput(input, strict: false);
+  }
+
+  void _trySetModulusFromInput(String input, {required bool strict}) {
+    final parsed = int.tryParse(input.trim());
+    if (parsed == null || parsed == 0) {
+      if (strict) {
+        _error = 'Modulus must be a non-zero integer';
+        notifyListeners();
+      }
+      return;
+    }
+
+    _modulus = parsed.abs();
+    _clearResults();
+    notifyListeners();
   }
 
   // --- Operation Methods ---
@@ -138,6 +169,9 @@ class ModuloCalculatorState extends ChangeNotifier {
       _firstOperand = null;
       _pendingOperation = null;
       _shouldClearDisplay = true;
+    } else {
+      reduceModulo();
+      _shouldClearDisplay = true;
     }
     notifyListeners();
   }
@@ -155,6 +189,62 @@ class ModuloCalculatorState extends ChangeNotifier {
 
     final expr = 'modinv($a, $_modulus)';
     _evaluateExpression(expr, 'Modular Inverse of $a mod $_modulus');
+  }
+
+  void calculateModularInverseFor(int a) {
+    _clearResults();
+    final expr = 'modinv($a, $_modulus)';
+    _evaluateExpression(expr, 'Modular Inverse of $a mod $_modulus');
+    notifyListeners();
+  }
+
+  void calculateModPowerFor(int base, int exponent) {
+    _clearResults();
+    final expr = 'modpow($base, $exponent, $_modulus)';
+    _evaluateExpression(expr, '$base^$exponent mod $_modulus');
+    notifyListeners();
+  }
+
+  void calculateGCDFor(int a, int b) {
+    _clearResults();
+    final expr = 'gcd($a, $b)';
+    _evaluateExpression(expr, 'GCD($a, $b)');
+    notifyListeners();
+  }
+
+  void calculateLCMFor(int a, int b) {
+    _clearResults();
+    final expr = 'lcm($a, $b)';
+    _evaluateExpression(expr, 'LCM($a, $b)');
+    notifyListeners();
+  }
+
+  void calculateExtendedGCDFor(int a, int b) {
+    _clearResults();
+    final expr = 'extgcd($a, $b)';
+    _evaluateExpression(expr, 'Extended GCD($a, $b)');
+    notifyListeners();
+  }
+
+  void checkCongruenceFor(int a, int b) {
+    _clearResults();
+    final expr = '(($a - $b) % $_modulus) == 0';
+    _evaluateExpression(expr, '$a ≡ $b (mod $_modulus)');
+    notifyListeners();
+  }
+
+  void calculateEulerTotientFor(int n) {
+    _clearResults();
+    final expr = 'phi($n)';
+    _evaluateExpression(expr, 'Euler φ($n)');
+    notifyListeners();
+  }
+
+  void calculateMatrixInverseModulo(String matrixLiteral) {
+    _clearResults();
+    final expr = 'modmatinv($matrixLiteral, $_modulus)';
+    _evaluateExpression(expr, 'Matrix inverse mod $_modulus');
+    notifyListeners();
   }
 
   void calculateGCD() {
@@ -240,7 +330,7 @@ class ModuloCalculatorState extends ChangeNotifier {
         _expression = '';
       }
     } else if (result is EngineError) {
-      _error = result.message;
+      _error = result.toString();
     }
 
     notifyListeners();
@@ -251,10 +341,10 @@ class ModuloCalculatorState extends ChangeNotifier {
   void _executeOperation() {
     if (_firstOperand == null || _pendingOperation == null) return;
 
-    final a = _firstOperand!.toInt();
-    final b = double.tryParse(_display)?.toInt();
-    if (b == null) {
-      _error = 'Invalid input';
+    final a = _parseInteger(_firstOperand!.toString());
+    final b = _parseInteger(_display);
+    if (a == null || b == null) {
+      _error = 'Modulo operations require integer inputs';
       notifyListeners();
       return;
     }
@@ -291,13 +381,15 @@ class ModuloCalculatorState extends ChangeNotifier {
   }
 
   void _evaluateExpression(String expr, String description) {
+    _logger.trace('Modulo eval: $expr');
     final result = _engine.evaluate(expr, _context);
 
     if (result is EngineSuccess) {
       if (result.value is NumberValue) {
         final value = (result.value as NumberValue).value;
-        _display = value.toInt().toString();
-        _result = description;
+        final intValue = value.toInt();
+        _display = intValue.toString();
+        _result = '$description = $intValue';
         _expression = '';
       } else if (result.value is ListValue) {
         // For extended GCD which returns [gcd, x, y]
@@ -311,8 +403,9 @@ class ModuloCalculatorState extends ChangeNotifier {
         _expression = '';
       }
     } else if (result is EngineError) {
-      _error = result.message;
+      _error = result.toString();
       _expression = '';
+      _logger.warn('Modulo eval failed: ${result.toString()}');
     }
   }
 
@@ -331,5 +424,11 @@ class ModuloCalculatorState extends ChangeNotifier {
     _result = null;
     _error = null;
     _message = null;
+  }
+
+  int? _parseInteger(String value) {
+    final number = double.tryParse(value);
+    if (number == null || !number.isFinite || number % 1 != 0) return null;
+    return number.toInt();
   }
 }

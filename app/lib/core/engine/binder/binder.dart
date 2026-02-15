@@ -176,13 +176,6 @@ class Binder {
           resultType,
           expr.position,
         );
-
-      default:
-        throw EngineError(
-          ErrorType.unknown,
-          'Unknown expression type: ${expr.runtimeType}',
-          position: expr.position,
-        );
     }
   }
 
@@ -201,10 +194,10 @@ class Binder {
         _symbols.define(stmt.name, value.type);
         return BoundLetStatement(stmt.name, value, value.type, stmt.position);
 
-      default:
+      case FunctionDeclaration():
         throw EngineError(
           ErrorType.unknown,
-          'Unknown statement type: ${stmt.runtimeType}',
+          'Function declarations are not supported yet',
           position: stmt.position,
         );
     }
@@ -217,6 +210,7 @@ class Binder {
       TokenType.multiply => BoundBinaryOperator.multiply,
       TokenType.divide => BoundBinaryOperator.divide,
       TokenType.power => BoundBinaryOperator.power,
+      TokenType.percent => BoundBinaryOperator.modulo,
       TokenType.equals => BoundBinaryOperator.equals,
       TokenType.notEquals => BoundBinaryOperator.notEquals,
       TokenType.lessThan => BoundBinaryOperator.lessThan,

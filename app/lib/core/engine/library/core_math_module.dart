@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:app/core/engine/evaluator/evaluator.dart';
+import 'package:app/core/engine/evaluator/runtime_errors.dart';
 import 'package:app/core/engine/library/library_module.dart';
+import 'package:app/core/engine_result.dart';
 import 'package:app/core/eval_types.dart';
 import 'package:app/core/eval_context.dart';
 
@@ -34,17 +36,57 @@ class CoreMathModule extends LibraryModule {
 
     // Inverse trig functions (output angle)
     'asin': NativeFunction(1, (args, context) {
-      final radians = math.asin(args[0].toDouble() ?? 0);
+      final x = args[0].toDouble();
+      if (x == null) {
+        throw RuntimeError(
+          message: 'asin requires a numeric argument',
+          type: ErrorType.typeMismatch,
+          operation: 'asin',
+        );
+      }
+      if (x < -1 || x > 1) {
+        throw RuntimeError(
+          message: 'Input must be between -1 and 1',
+          type: ErrorType.domainError,
+          operation: 'asin',
+          hint: 'Use a value in the range [-1, 1].',
+        );
+      }
+      final radians = math.asin(x);
       return NumberValue(_fromRadians(radians, context));
     }),
 
     'acos': NativeFunction(1, (args, context) {
-      final radians = math.acos(args[0].toDouble() ?? 0);
+      final x = args[0].toDouble();
+      if (x == null) {
+        throw RuntimeError(
+          message: 'acos requires a numeric argument',
+          type: ErrorType.typeMismatch,
+          operation: 'acos',
+        );
+      }
+      if (x < -1 || x > 1) {
+        throw RuntimeError(
+          message: 'Input must be between -1 and 1',
+          type: ErrorType.domainError,
+          operation: 'acos',
+          hint: 'Use a value in the range [-1, 1].',
+        );
+      }
+      final radians = math.acos(x);
       return NumberValue(_fromRadians(radians, context));
     }),
 
     'atan': NativeFunction(1, (args, context) {
-      final radians = math.atan(args[0].toDouble() ?? 0);
+      final x = args[0].toDouble();
+      if (x == null) {
+        throw RuntimeError(
+          message: 'atan requires a numeric argument',
+          type: ErrorType.typeMismatch,
+          operation: 'atan',
+        );
+      }
+      final radians = math.atan(x);
       return NumberValue(_fromRadians(radians, context));
     }),
 
@@ -75,17 +117,56 @@ class CoreMathModule extends LibraryModule {
 
     // Other math functions
     'sqrt': NativeFunction(1, (args, context) {
-      double val = args[0].toDouble() ?? 0;
+      final val = args[0].toDouble();
+      if (val == null) {
+        throw RuntimeError(
+          message: 'sqrt requires a numeric argument',
+          type: ErrorType.typeMismatch,
+          operation: 'sqrt',
+        );
+      }
       if (val < 0) return ComplexValue(0, math.sqrt(-val));
       return NumberValue(math.sqrt(val));
     }),
 
     'ln': NativeFunction(1, (args, context) {
-      return NumberValue(math.log(args[0].toDouble() ?? 0));
+      final val = args[0].toDouble();
+      if (val == null) {
+        throw RuntimeError(
+          message: 'ln requires a numeric argument',
+          type: ErrorType.typeMismatch,
+          operation: 'ln',
+        );
+      }
+      if (val <= 0) {
+        throw RuntimeError(
+          message: 'ln is only defined for positive values',
+          type: ErrorType.domainError,
+          operation: 'ln',
+          hint: 'Use x > 0.',
+        );
+      }
+      return NumberValue(math.log(val));
     }),
 
     'log': NativeFunction(1, (args, context) {
-      return NumberValue(math.log(args[0].toDouble() ?? 0) / math.ln10);
+      final val = args[0].toDouble();
+      if (val == null) {
+        throw RuntimeError(
+          message: 'log requires a numeric argument',
+          type: ErrorType.typeMismatch,
+          operation: 'log',
+        );
+      }
+      if (val <= 0) {
+        throw RuntimeError(
+          message: 'log is only defined for positive values',
+          type: ErrorType.domainError,
+          operation: 'log',
+          hint: 'Use x > 0.',
+        );
+      }
+      return NumberValue(math.log(val) / math.ln10);
     }),
 
     'abs': NativeFunction(1, (args, context) {
@@ -144,14 +225,24 @@ class CoreMathModule extends LibraryModule {
 
   double _acosh(double x) {
     if (x < 1) {
-      throw Exception('acosh domain error: x must be ≥ 1');
+      throw RuntimeError(
+        message: 'Input must be greater than or equal to 1',
+        type: ErrorType.domainError,
+        operation: 'acosh',
+        hint: 'Use x >= 1.',
+      );
     }
     return math.log(x + math.sqrt(x - 1) * math.sqrt(x + 1));
   }
 
   double _atanh(double x) {
     if (x <= -1 || x >= 1) {
-      throw Exception('atanh domain error: |x| must be < 1');
+      throw RuntimeError(
+        message: 'Absolute value must be less than 1',
+        type: ErrorType.domainError,
+        operation: 'atanh',
+        hint: 'Use -1 < x < 1.',
+      );
     }
     return 0.5 * math.log((1 + x) / (1 - x));
   }

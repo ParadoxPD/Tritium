@@ -20,7 +20,7 @@ class EvaluationEngine {
   // Persistent subsystems
   late final Binder _binder;
   late final Evaluator _evaluator;
-  final logger = LoggerService();
+  final LoggerService logger = LoggerService();
 
   EvaluationEngine() {
     _binder = Binder();
@@ -35,7 +35,7 @@ class EvaluationEngine {
       return EngineSuccess(NumberValue(0), context);
     }
 
-    logger.info(input);
+    logger.debug('Evaluating expression: $input');
 
     try {
       // -----------------------------------------------------------------------
@@ -45,7 +45,7 @@ class EvaluationEngine {
       final tokenizer = Tokenizer(input);
       final tokens = tokenizer.tokenize();
 
-      logger.info(tokens.toString());
+      logger.trace('Tokens: $tokens');
       // -----------------------------------------------------------------------
       // STEP 2: PARSING
       // Organize tokens into a structural tree (AST)
@@ -53,19 +53,23 @@ class EvaluationEngine {
       final parser = Parser(tokens);
       final ast = parser.parse();
 
-      logger.info(ast.toString());
+      logger.trace('AST: $ast');
       // -----------------------------------------------------------------------
       // STEP 3: BINDING (Semantic Analysis)
       // verify variable names, check types, link symbols to the Registry
       // -----------------------------------------------------------------------
       final boundProgram = _binder.bind(ast);
 
-      logger.info(boundProgram.toString());
+      logger.trace('Bound AST: $boundProgram');
       // Check for semantic errors (e.g., "Unknown variable 'x'")
       if (_binder.diagnostics.isNotEmpty) {
+        final diagnostic = _binder.diagnostics.first;
+        logger.warn('Binding diagnostic: ${diagnostic.toString()}');
         return EngineError(
-          ErrorType.unknown,
-          _binder.diagnostics.first.message,
+          diagnostic.type,
+          diagnostic.message,
+          position: diagnostic.position,
+          hint: diagnostic.hint,
         );
       }
 
@@ -74,6 +78,7 @@ class EvaluationEngine {
       // Execute the bound tree to get a final value
       // -----------------------------------------------------------------------
       final value = _evaluator.evaluate(boundProgram, context);
+      logger.debug('Evaluation result: ${value.toDisplayString()}');
 
       // -----------------------------------------------------------------------
       // STEP 5: STATE UPDATE
@@ -82,12 +87,19 @@ class EvaluationEngine {
       _evaluator.setVariable('Ans', value);
 
       return EngineSuccess(value, context);
+    } on EngineError catch (e) {
+      logger.warn('Engine error: ${e.toString()}');
+      return e;
     } on RuntimeError catch (e) {
-      // Logic errors (Divide by zero, etc.)
-      return EngineError(ErrorType.runtime, e.message);
-    } catch (e) {
-      // Unexpected or syntax errors
-      return EngineError(ErrorType.invalidSyntax, e.toString());
+      logger.warn('Runtime error: ${e.toString()}');
+      return e.toEngineError();
+    } catch (e, st) {
+      logger.error('Unexpected engine failure', e, st);
+      return EngineError(
+        ErrorType.unknown,
+        'Unexpected evaluation failure',
+        hint: 'Please check the expression and try again.',
+      );
     }
   }
 

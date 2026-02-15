@@ -138,7 +138,7 @@ class CalculatorState extends ChangeNotifier {
       _logger.info(_display);
       _context = result.context; // Use updated context from engine
     } else if (result is EngineError) {
-      _display = 'Error: ${result.message}';
+      _display = 'Error: ${result.toString()}';
       _logger.info(_display);
     }
 
